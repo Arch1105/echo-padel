@@ -164,6 +164,18 @@ const STRINGS := {
 	"help_settings_heading": {"en": "Settings", "es": "Configuración"},
 	"help_settings_body": {"en": "Adjust the master volume and switch between English and Spanish menus and voice from the Settings screen, reachable from the main menu.",
 			"es": "Ajusta el volumen general y cambia entre menús y voz en inglés o español desde la pantalla de Configuración, accesible desde el menú principal."},
+
+	"play_online_button": {"en": "Play Online (LAN)", "es": "Jugar en línea (red local)"},
+	"play_online_desc": {"en": "Play against someone else on the same WiFi or local network - no internet or account needed.",
+			"es": "Juega contra otra persona en la misma red WiFi o local. No necesitas internet ni cuenta."},
+	"lan_title": {"en": "Play Online (LAN)", "es": "Jugar en línea (red local)"},
+	"lan_cancel_desc": {"en": "Stop searching and return to the main menu.", "es": "Deja de buscar y vuelve al menú principal."},
+	"lan_searching_message": {"en": "Searching for another player on your network. Make sure their copy of Echo Padel is on the same WiFi and has also chosen Play Online.",
+			"es": "Buscando a otro jugador en tu red. Asegúrate de que su copia de Echo Padel esté en la misma WiFi y también haya elegido Jugar en línea."},
+	"lan_still_searching_message": {"en": "Still searching for another player...", "es": "Todavía buscando a otro jugador..."},
+	"lan_connected_message": {"en": "Connected to %s. Starting the match.", "es": "Conectado con %s. Comenzando el partido."},
+	"lan_failed_message": {"en": "Couldn't connect. Check you're both on the same network and try again.",
+			"es": "No se pudo conectar. Comprueba que ambos estén en la misma red e inténtalo de nuevo."},
 }
 
 const TIER_NAMES_ES := [

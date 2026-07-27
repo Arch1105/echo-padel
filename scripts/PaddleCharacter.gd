@@ -184,3 +184,9 @@ func reset_position() -> void:
 	current_col = (Court.GRID - 1) / 2
 	current_row_local = (Court.GRID - 1) / 2
 	_snap_to_current_cell(false)
+
+## Public entry point NetworkSession.gd uses (see net_paddle_position) to
+## move the client's puppet paddle - current_col/current_row_local are
+## expected to already be set by the caller before this runs.
+func puppet_snap(animate: bool = true) -> void:
+	_snap_to_current_cell(animate)

@@ -67,13 +67,13 @@ func _physics_process(delta: float) -> void:
 
 	if not swinging_held:
 		if Input.is_action_just_pressed("move_left"):
-			move(-1, 0)
+			_do_move(-1, 0)
 		elif Input.is_action_just_pressed("move_right"):
-			move(1, 0)
+			_do_move(1, 0)
 		elif Input.is_action_just_pressed("move_forward"):
-			move(0, -1)
+			_do_move(0, -1)
 		elif Input.is_action_just_pressed("move_back"):
-			move(0, 1)
+			_do_move(0, 1)
 
 	if Input.is_action_just_pressed("swing"):
 		_charging = true
@@ -91,6 +91,17 @@ func _physics_process(delta: float) -> void:
 
 func cancel_charge() -> void:
 	_charging = false
+
+## In a LAN match (see NetworkSession.gd), applies locally right away for
+## responsiveness (move() always succeeds within the grid, so there's no
+## real risk of ever disagreeing with the host's own authoritative copy of
+## this same call) *and* tells the host, so its Bot-slot puppet of this
+## player stays in sync. Outside a networked client, this is exactly the
+## plain local move() it replaced.
+func _do_move(delta_col: int, delta_row: int) -> void:
+	move(delta_col, delta_row)
+	if NetworkSession.is_networked and not NetworkSession.is_host:
+		NetworkSession.submit_move.rpc(delta_col, delta_row)
 
 func _current_shape() -> Dictionary:
 	var curve := 0
@@ -112,7 +123,7 @@ func _release_swing() -> void:
 	shape["power"] = power
 	shape["is_smash"] = false
 	_apply_career_upgrades(shape)
-	ball.attempt_hit("you", current_col, current_row_local, shape)
+	_submit_hit(shape)
 
 func _attempt_smash() -> void:
 	_charging = false
@@ -120,7 +131,19 @@ func _attempt_smash() -> void:
 	shape["power"] = 1.0
 	shape["is_smash"] = true
 	_apply_career_upgrades(shape)
-	ball.attempt_hit("you", current_col, current_row_local, shape)
+	_submit_hit(shape)
+
+## The client's own Ball is a puppet (attempt_hit() is a no-op on one, see
+## Ball.gd) - only the host resolves hits, so a networked client sends the
+## shape to the host instead and waits for whatever the host broadcasts back
+## (sound/score/etc.) through the usual relayed channels. On the host - or
+## outside a networked match entirely - this is exactly the direct local
+## call it replaced.
+func _submit_hit(shape: Dictionary) -> void:
+	if NetworkSession.is_networked and not NetworkSession.is_host:
+		NetworkSession.submit_hit.rpc(shape)
+	else:
+		ball.attempt_hit("you", current_col, current_row_local, shape)
 
 ## Strength adds a flat bonus to normal-hit power (harmless no-op on a smash,
 ## which is already max power) - IQ widens how far a shaped shot lands from

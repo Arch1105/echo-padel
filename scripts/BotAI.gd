@@ -15,6 +15,15 @@ class_name BotAI
 ## exactly as before via `difficulty`. Career mode instead sets
 ## `strength_override` directly (any value, including beyond 1.0), which
 ## takes priority when set (>= 0.0).
+##
+## In a LAN match (see NetworkSession.gd) this same "Bot" node stands in for
+## the *remote human* instead of an AI, on both ends: on the host, it
+## registers as the target for RPC-received input (move()/ball.attempt_hit()
+## get called directly by NetworkSession, all the AI fields/logic below go
+## unused); on the client, it's a pure puppet whose position is set entirely
+## by the host's broadcasts. Reusing this class rather than writing separate
+## ones avoids Godot's runtime-script-swap gotcha (changing a node's script
+## after it's already in the tree doesn't re-run _ready()).
 
 @export_enum("easy", "medium", "hard", "pro", "elite", "legendary") var difficulty: String = "medium"
 var strength_override: float = -1.0
@@ -59,6 +68,11 @@ func _ready() -> void:
 	# ball is assigned by MatchManager after this node's _ready() runs (child
 	# nodes ready before their parent), so the bounced signal is wired up
 	# from MatchManager once ball/bot are both in place - see MatchManager.gd.
+	if NetworkSession.is_networked:
+		if NetworkSession.is_host:
+			NetworkSession.register_remote_paddle(self)
+		else:
+			NetworkSession.register_local_puppet_paddle(self)
 
 func _current_strength() -> float:
 	if strength_override >= 0.0:
@@ -109,6 +123,8 @@ func _on_ball_bounced(side_is_player: bool, col: int, row_local: int, bounce_num
 	_reacting = true
 
 func _physics_process(delta: float) -> void:
+	if NetworkSession.is_networked:
+		return  # host: driven directly by NetworkSession's RPC handlers. client: a pure puppet.
 	if not _reacting or _committed_miss:
 		return
 	if _react_timer > 0.0:

@@ -103,6 +103,13 @@ var target_col: int = -1
 var target_row_local: int = -1
 var hit_window_open: bool = false
 
+## True only on the client's own Ball node in a LAN match (see
+## NetworkSession.gd) - a puppet never runs its own physics/hop-state
+## machine, it just displays whatever the host's authoritative Ball tells it
+## via puppet_apply_transform()/puppet_play_visual_effect() (see those, and
+## _play_and_relay() below, for how the host keeps it in sync).
+var is_puppet: bool = false
+
 ## Sighted-player visuals only (see PaddleCharacter.gd's racket-glow and the
 ## dolly highlight below) - the audio-first design needs none of this, so it
 ## stays purely cosmetic and never gates gameplay.
@@ -133,6 +140,8 @@ func expected_hitter_is_player() -> bool:
 ## landing spot; pass -1 (the default) to keep the normal match-serve target.
 func start_serve(server_side_is_player: bool, server_col: int, server_row_local: int,
 		target_col_override: int = -1, target_row_override: int = -1) -> void:
+	if is_puppet:
+		return  # the client's puppet Ball only ever displays what the host broadcasts
 	var from: Vector3 = Court.cell_center(server_side_is_player, server_col, server_row_local) + Vector3(0, 1.0, 0)
 	var target_side_is_player: bool = not server_side_is_player
 	var land_row: int = target_row_override if target_row_override >= 0 else 1
@@ -147,6 +156,8 @@ func start_serve(server_side_is_player: bool, server_col: int, server_row_local:
 ## 1 forward/short, 0 flat). hitter_col/hitter_row_local: the hitter's own
 ## current tile (shot origin).
 func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dictionary) -> bool:
+	if is_puppet:
+		return false  # the client's puppet Ball never resolves hits itself - see NetworkSession.submit_hit
 	if not hit_window_open:
 		return false
 	var hitter_side_is_player: bool = (by == "you")
@@ -173,7 +184,7 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 	var target_side_is_player: bool = not hitter_side_is_player
 
 	if not is_smash and power < NET_MIN_POWER:
-		Sfx3D.play_at("net_hit", from, 2.0, 1.0, Sfx3D.NEAR_BUS if hitter_side_is_player else Sfx3D.DISTANT_BUS)
+		_play_and_relay("net_hit", from, 2.0, 1.0, Sfx3D.NEAR_BUS if hitter_side_is_player else Sfx3D.DISTANT_BUS)
 		_resolve_fault("into_net", _opponent_of(by))
 		return true
 
@@ -235,7 +246,7 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 	_bounce_count_this_side = 0
 	if hitter_side_is_player:
 		var volume_db: float = -2.0 if sound_name == "mishit" else 4.0
-		Sfx3D.play_at(sound_name, from, volume_db, 1.0, Sfx3D.NEAR_BUS)
+		_play_and_relay(sound_name, from, volume_db, 1.0, Sfx3D.NEAR_BUS)
 		if sound_name == "smash":
 			Sfx3D.rumble_smash()
 		elif sound_name == "mishit":
@@ -243,7 +254,7 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 		else:
 			Sfx3D.rumble(0.3, 0.9, 0.15)
 	else:
-		Sfx3D.play_at(sound_name, from, 0.0, 1.0, Sfx3D.DISTANT_BUS)
+		_play_and_relay(sound_name, from, 0.0, 1.0, Sfx3D.DISTANT_BUS)
 	if sound_name == "smash":
 		_spawn_smash_fireworks(from)
 	_launch_flight(from, to, duration, peak_height, target_side_is_player, allow_bank, hitter_side_is_player,
@@ -251,11 +262,18 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 	returned.emit(by)
 	return true
 
+## Relays to the client in a LAN match (see puppet_play_visual_effect(), the
+## client-side receiver) so both players see the burst, not just the host.
+func _spawn_smash_fireworks(pos: Vector3) -> void:
+	_spawn_smash_fireworks_local(pos)
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_visual_effect("fireworks", pos)
+
 ## Sighted-player visual only - a one-shot particle burst at the hit point
 ## when a smash actually connects. CPUParticles3D (not GPUParticles3D) since
 ## the project runs the gl_compatibility renderer, which CPU particles work
 ## on without needing shader support.
-func _spawn_smash_fireworks(pos: Vector3) -> void:
+func _spawn_smash_fireworks_local(pos: Vector3) -> void:
 	var particles := CPUParticles3D.new()
 	var mesh := SphereMesh.new()
 	mesh.radius = 0.045
@@ -284,11 +302,17 @@ func _spawn_smash_fireworks(pos: Vector3) -> void:
 	var t: SceneTreeTimer = get_tree().create_timer(FIREWORKS_LIFETIME)
 	t.timeout.connect(particles.queue_free)
 
+## Relays to the client in a LAN match, same reasoning as the fireworks above.
+func _spawn_bounce_flash(pos: Vector3) -> void:
+	_spawn_bounce_flash_local(pos)
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_visual_effect("bounce_flash", pos)
+
 ## Sighted-player visual only - a small flat burst of dust at ground level on
 ## every bounce (both the first "locate" bounce and the second), so a bounce
 ## reads as a distinct visible event rather than only being inferable from
 ## the ball mesh's continuous arc.
-func _spawn_bounce_flash(pos: Vector3) -> void:
+func _spawn_bounce_flash_local(pos: Vector3) -> void:
 	var particles := CPUParticles3D.new()
 	var mesh := SphereMesh.new()
 	mesh.radius = 0.025
@@ -334,6 +358,8 @@ func _launch_flight(from: Vector3, to: Vector3, duration: float, peak_height: fl
 func _physics_process(delta: float) -> void:
 	if _ball_mat:
 		_ball_mat.albedo_color = BALL_DOLLY_COLOR if hop_is_dolly else BALL_NORMAL_COLOR
+	if is_puppet:
+		return
 	match _hop_state:
 		HopState.FLIGHT, HopState.CONTINUATION:
 			_integrate(delta)
@@ -347,6 +373,36 @@ func _physics_process(delta: float) -> void:
 				hit_window_open = false
 				_hop_state = HopState.NONE
 				_resolve_fault("missed", _last_hitter)
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_ball_transform(global_position, hop_is_dolly, hit_window_open, _hop_target_side_is_player)
+
+## Applied by the client's puppet Ball each tick from the host's broadcast
+## (see NetworkSession.gd's net_ball_transform RPC) - already mirrored for
+## this device's own perspective before it arrives, so no translation needed
+## here, just apply it directly.
+func puppet_apply_transform(pos: Vector3, is_dolly: bool, window_open: bool, target_side_is_player: bool) -> void:
+	global_position = pos
+	hop_is_dolly = is_dolly
+	hit_window_open = window_open
+	_hop_target_side_is_player = target_side_is_player
+
+## Host-only equivalent of Sfx3D.play_at() that also relays the sound to a
+## connected LAN client (mirrored for their perspective - see
+## NetworkSession.relay_sound()). A no-op relay outside a networked host, so
+## every call site can use this unconditionally without branching.
+func _play_and_relay(sound_name: String, pos: Vector3, volume_db: float, pitch: float, bus: String) -> void:
+	Sfx3D.play_at(sound_name, pos, volume_db, pitch, bus)
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_sound(sound_name, pos, volume_db, pitch, bus)
+
+## The client's puppet Ball never runs _handle_bounce()/attempt_hit() itself
+## (is_puppet skips all of that) - this is the receiving half, called from
+## NetworkSession's net_visual_effect RPC.
+func puppet_play_visual_effect(effect_name: String, pos: Vector3) -> void:
+	if effect_name == "fireworks":
+		_spawn_smash_fireworks_local(pos)
+	elif effect_name == "bounce_flash":
+		_spawn_bounce_flash_local(pos)
 
 func _integrate(delta: float) -> void:
 	_vy -= _gravity * delta
@@ -362,7 +418,7 @@ func _integrate(delta: float) -> void:
 			_vz = -_vz
 			var bank_bus: String = Sfx3D.NEAR_BUS if _hop_bank_side_is_player else Sfx3D.DISTANT_BUS
 			var bank_volume_db: float = 2.0 if _hop_bank_side_is_player else 0.0
-			Sfx3D.play_at("wall_bank", global_position, bank_volume_db, 1.0, bank_bus)
+			_play_and_relay("wall_bank", global_position, bank_volume_db, 1.0, bank_bus)
 
 	if global_position.y <= 0.0 and _vy < 0.0:
 		_handle_bounce()
@@ -393,7 +449,7 @@ func _handle_bounce() -> void:
 		target_col = col
 		target_row_local = row_local
 		var volume_db: float = 6.0 if landed_side_is_player else 0.0
-		Sfx3D.play_at("bounce_locate", global_position, volume_db, pitch, bus)
+		_play_and_relay("bounce_locate", global_position, volume_db, pitch, bus)
 		if landed_side_is_player:
 			Sfx3D.rumble(0.15, 0.3, 0.08)
 		var cont_height: float
@@ -425,7 +481,7 @@ func _handle_bounce() -> void:
 		# different on its 2nd bounce) - but the player's own side gets it
 		# louder still since that's the deadline they need to react to.
 		var volume_db: float = 10.0 if landed_side_is_player else 2.0
-		Sfx3D.play_at("bounce_second", global_position, volume_db, pitch, bus)
+		_play_and_relay("bounce_second", global_position, volume_db, pitch, bus)
 		if landed_side_is_player:
 			Sfx3D.rumble(0.25, 0.5, 0.1)
 		_grace_elapsed = 0.0

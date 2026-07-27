@@ -67,6 +67,13 @@ text = "Career"
 accessibility_name = "Career"
 accessibility_description = "Climb from School League all the way to the Grand Slams, and keep winning as many as you can."
 
+[node name="PlayOnlineButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(260, 52)
+text = "Play Online (LAN)"
+accessibility_name = "Play online, local network"
+accessibility_description = "Play against someone else on the same WiFi or local network."
+
 [node name="SettingsButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(260, 52)

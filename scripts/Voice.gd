@@ -387,12 +387,18 @@ func say_dynamic(text: String) -> void:
 
 ## Speaks "You: N game(s)/set(s)." or "Bot: N game(s)/set(s)."
 func say_tally(prefix_key: String, count: int, singular_key: String, plural_key: String) -> void:
+	say_sequence(tally_keys(prefix_key, count, singular_key, plural_key))
+
+## Public so callers that need to *relay* the same announcement elsewhere
+## (see MatchManager.gd's LAN-mode _speak_tally()) can get the exact same key
+## list without duplicating this logic.
+func tally_keys(prefix_key: String, count: int, singular_key: String, plural_key: String) -> Array[String]:
 	var keys: Array[String] = [prefix_key]
 	var num_key := "num_%d" % count
 	if _lines().has(num_key):
 		keys.append(num_key)
 	keys.append(singular_key if count == 1 else plural_key)
-	say_sequence(keys)
+	return keys
 
 ## Returns true if a running screen reader actually spoke the text.
 func _speak_via_screen_reader(text: String) -> bool:

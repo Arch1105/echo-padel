@@ -25,6 +25,7 @@ Music="*res://scripts/Music.gd"
 CareerData="*res://scripts/CareerData.gd"
 CareerRun="*res://scripts/CareerRun.gd"
 Updater="*res://scripts/Updater.gd"
+NetworkSession="*res://scripts/NetworkSession.gd"
 
 [input]
 

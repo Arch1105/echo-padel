@@ -15,6 +15,7 @@ const DIFFICULTY_KEYS := ["difficulty_easy", "difficulty_medium", "difficulty_ha
 @onready var play_button: Button = $VBoxContainer/PlayButton
 @onready var training_button: Button = $VBoxContainer/TrainingButton
 @onready var career_button: Button = $VBoxContainer/CareerButton
+@onready var play_online_button: Button = $VBoxContainer/PlayOnlineButton
 @onready var settings_button: Button = $VBoxContainer/SettingsButton
 @onready var help_button: Button = $VBoxContainer/HelpButton
 @onready var check_updates_button: Button = $VBoxContainer/CheckUpdatesButton
@@ -36,6 +37,7 @@ func _ready() -> void:
 	play_button.pressed.connect(_on_play_pressed)
 	training_button.pressed.connect(_on_training_pressed)
 	career_button.pressed.connect(_on_career_pressed)
+	play_online_button.pressed.connect(_on_play_online_pressed)
 	settings_button.pressed.connect(_on_settings_pressed)
 	help_button.pressed.connect(_on_help_pressed)
 	check_updates_button.pressed.connect(_on_check_updates_pressed)
@@ -73,6 +75,10 @@ func _apply_text() -> void:
 	career_button.accessibility_name = Loc.t("career_button")
 	career_button.accessibility_description = Loc.t("career_desc")
 
+	play_online_button.text = Loc.t("play_online_button")
+	play_online_button.accessibility_name = Loc.t("play_online_button")
+	play_online_button.accessibility_description = Loc.t("play_online_desc")
+
 	settings_button.text = Loc.t("settings_button")
 	settings_button.accessibility_name = Loc.t("settings_button")
 	settings_button.accessibility_description = Loc.t("settings_desc")
@@ -103,6 +109,9 @@ func _on_career_pressed() -> void:
 		get_tree().change_scene_to_file("res://scenes/CareerHub.tscn")
 	else:
 		get_tree().change_scene_to_file("res://scenes/CareerMenu.tscn")
+
+func _on_play_online_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/OnlineLan.tscn")
 
 func _on_settings_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/Settings.tscn")

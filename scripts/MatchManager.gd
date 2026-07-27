@@ -12,12 +12,28 @@ class_name MatchManager
 ## "Bot serves." Regular (non-Career) matches are unaffected, since there's
 ## no persistent named-opponent concept there.
 ##
+## In a LAN match (see NetworkSession.gd), only the *host's* MatchManager
+## actually runs this scoring state machine - it's the single source of
+## truth, exactly as for a local bot match, just with the "Bot" node driven
+## by a remote human's input instead of AI. Every _speak()/_speak_sequence()/
+## _speak_tally() call additionally relays to the client (with "you"/"bot"
+## keys flipped, since the client's own "you" is the host's "bot" slot - see
+## NetworkSession.flip_you_bot_key()), and _sync_network_score() mirrors the
+## raw score fields the same way, so the client's own local MatchManager -
+## which never independently computes anything - can still answer its own
+## Check Score button correctly using the exact same _announce_current_score
+## code, unmodified, just fed mirrored numbers. The client's opponent is
+## still announced with the generic "bot" wording for now (no separate
+## "opponent"-worded clip set exists yet) - a known, easy follow-up, not a
+## functional gap.
+##
 ## Every serve (including the very first) waits for a "ready" press (Enter/
 ## Xbox B/PS5 Circle - the same button as a smash, just contextually never
 ## live at the same time) rather than firing right after the score
 ## announcement - per feedback, without this the ball was already inbound
 ## while the screen reader was still finishing the score, so the first
-## bounce could get missed entirely.
+## bounce could get missed entirely. In a LAN match both players confirm
+## ready independently before every point, not just whoever's serving.
 
 const POINT_WORDS := ["love", "fifteen", "thirty", "forty"]
 
@@ -36,34 +52,95 @@ var in_tiebreak: bool = false
 var tiebreak_you: int = 0
 var tiebreak_bot: int = 0
 var match_over: bool = false
+
 var _awaiting_serve_confirm: bool = false
+var _host_ready_confirmed: bool = false
+var _client_ready_confirmed: bool = false
+var _client_awaiting_ready: bool = false
 
 func _process(_delta: float) -> void:
-	if _awaiting_serve_confirm and Input.is_action_just_pressed("smash"):
+	var is_network_client: bool = NetworkSession.is_networked and not NetworkSession.is_host
+	if is_network_client:
+		if _client_awaiting_ready and Input.is_action_just_pressed("smash"):
+			_client_awaiting_ready = false
+			NetworkSession.submit_ready.rpc()
+		return
+
+	if not _awaiting_serve_confirm:
+		return
+	if Input.is_action_just_pressed("smash"):
+		_host_ready_confirmed = true
+	if NetworkSession.is_networked and NetworkSession.consume_remote_ready():
+		_client_ready_confirmed = true
+	if _host_ready_confirmed and _client_ready_confirmed:
 		_awaiting_serve_confirm = false
 		_serve()
 
 func _await_ready_then_serve() -> void:
 	_awaiting_serve_confirm = true
+	_host_ready_confirmed = false
+	_client_ready_confirmed = not NetworkSession.is_networked
+	Sfx3D.play_ui("ready_chime")
+	Voice.say("ready_prompt")
+	if NetworkSession.is_networked:
+		NetworkSession.relay_await_ready()
+
+## Called by NetworkSession's net_await_ready RPC on the client - the local
+## mirror of _await_ready_then_serve() above, for the player who isn't
+## serving this point (or is, from their own perspective - either way, both
+## players see this every point).
+func client_show_ready_prompt() -> void:
+	_client_awaiting_ready = true
 	Sfx3D.play_ui("ready_chime")
 	Voice.say("ready_prompt")
 
 func _ready() -> void:
 	get_tree().paused = false
 	Music.stop_music()
+	player.match_manager = self
+
+	var is_network_client: bool = NetworkSession.is_networked and not NetworkSession.is_host
+	if is_network_client:
+		# The client never runs this scoring state machine itself - see the
+		# class doc comment. It just waits for the host's relayed events.
+		return
+
 	player.ball = ball
 	bot.ball = ball
-	player.match_manager = self
-	if CareerRun.active:
+	ball.is_puppet = false
+	if NetworkSession.is_networked:
+		# LAN match: no AI, no Career - the "Bot" node is driven by the
+		# remote player's real input (see BotAI.gd/NetworkSession.gd).
+		_speak("match_start")
+	elif CareerRun.active:
 		bot.strength_override = CareerRun.current_strength()
 		Voice.say_dynamic("%s. %s. Your opponent: %s." %
 				[CareerRun.tournament_label(), CareerRun.current_round_name(), CareerRun.opponent_name])
+		ball.bounced.connect(bot._on_ball_bounced)
+		_speak("match_start")
 	else:
 		bot.difficulty = GameSettings.difficulty
-	ball.bounced.connect(bot._on_ball_bounced)
+		ball.bounced.connect(bot._on_ball_bounced)
+		_speak("match_start")
 	ball.point_resolved.connect(_on_point_resolved)
-	Voice.say("match_start")
 	_start_set()
+
+## --- Speak-and-relay wrappers - see class doc comment. ---
+
+func _speak(key: String) -> void:
+	Voice.say(key)
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_speak([key])
+
+func _speak_sequence(keys: Array) -> void:
+	Voice.say_sequence(keys)
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_speak(keys)
+
+func _speak_tally(prefix_key: String, count: int, singular_key: String, plural_key: String) -> void:
+	Voice.say_tally(prefix_key, count, singular_key, plural_key)
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_speak(Voice.tally_keys(prefix_key, count, singular_key, plural_key))
 
 ## Composes "[prefix] [Surname]" (e.g. point_prefix + "Mercer") in Career
 ## mode; otherwise speaks the normal fixed "..._bot" phrase.
@@ -71,29 +148,29 @@ func _say_bot_prefixed(fixed_key: String, prefix_key: String) -> void:
 	if CareerRun.active:
 		Voice.say_sequence([prefix_key, OpponentNames.name_key(CareerRun.opponent_surname)])
 	else:
-		Voice.say(fixed_key)
+		_speak(fixed_key)
 
 ## Composes "[Surname] serves." in Career mode; otherwise "Bot serves."
 func _say_bot_serve() -> void:
 	if CareerRun.active:
 		Voice.say_sequence([OpponentNames.name_key(CareerRun.opponent_surname), "serves_suffix"])
 	else:
-		Voice.say("bot_serve")
+		_speak("bot_serve")
 
 func announce_score() -> void:
 	if in_tiebreak:
-		Voice.say_sequence(["num_%d" % tiebreak_you, "num_%d" % tiebreak_bot])
+		_speak_sequence(["num_%d" % tiebreak_you, "num_%d" % tiebreak_bot])
 	else:
 		_announce_current_score()
-	Voice.say_tally("you_prefix", sets_you, "sets_singular", "sets_plural")
-	Voice.say_tally("you_prefix", games_you, "games_singular", "games_plural")
+	_speak_tally("you_prefix", sets_you, "sets_singular", "sets_plural")
+	_speak_tally("you_prefix", games_you, "games_singular", "games_plural")
 	if CareerRun.active:
 		var name_key: String = OpponentNames.name_key(CareerRun.opponent_surname)
 		Voice.say_tally(name_key, sets_bot, "sets_singular", "sets_plural")
 		Voice.say_tally(name_key, games_bot, "games_singular", "games_plural")
 	else:
-		Voice.say_tally("bot_prefix", sets_bot, "sets_singular", "sets_plural")
-		Voice.say_tally("bot_prefix", games_bot, "games_singular", "games_plural")
+		_speak_tally("bot_prefix", sets_bot, "sets_singular", "sets_plural")
+		_speak_tally("bot_prefix", games_bot, "games_singular", "games_plural")
 
 func _start_set() -> void:
 	games_you = 0
@@ -105,7 +182,7 @@ func _start_game() -> void:
 	points_bot = 0
 	in_tiebreak = false
 	if server_is_you:
-		Voice.say("your_serve")
+		_speak("your_serve")
 	else:
 		_say_bot_serve()
 	_await_ready_then_serve()
@@ -114,24 +191,28 @@ func _serve() -> void:
 	player.cancel_charge()
 	player.reset_position()
 	bot.reset_position()
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_paddle_position(bot.current_col, bot.current_row_local)
 	var server: PaddleCharacter = player if server_is_you else bot
 	ball.start_serve(server_is_you, server.current_col, server.current_row_local)
 
 func _on_point_resolved(winner: String, reason: String) -> void:
 	if match_over:
 		return
-	Voice.say(reason)
+	_speak(reason)
 	await get_tree().create_timer(0.6).timeout
 	_award_point(winner)
 
 func _award_point(winner: String) -> void:
 	Sfx3D.play_ui("cheer" if winner == "you" else "boo")
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_cheer_or_boo(winner == "you")
 	if winner == "you":
 		Sfx3D.rumble(0.5, 0.8, 0.12)
 	else:
 		Sfx3D.rumble(0.6, 0.15, 0.35)
 	if winner == "you":
-		Voice.say("point_you")
+		_speak("point_you")
 	else:
 		_say_bot_prefixed("point_bot", "point_prefix")
 	if in_tiebreak:
@@ -148,6 +229,7 @@ func _award_point(winner: String) -> void:
 	else:
 		_announce_current_score()
 		_announce_stakes_before_serve()
+		_sync_network_score()
 		_await_ready_then_serve()
 
 func _would_win_game(p: int, o: int) -> bool:
@@ -158,18 +240,18 @@ func _announce_current_score() -> void:
 	var receiver_points: int = points_bot if server_is_you else points_you
 	if server_points >= 3 and receiver_points >= 3:
 		if server_points == receiver_points:
-			Voice.say("deuce")
+			_speak("deuce")
 		else:
 			var leader_is_you: bool = (points_you > points_bot)
 			if leader_is_you:
-				Voice.say("advantage_you")
+				_speak("advantage_you")
 			else:
 				_say_bot_prefixed("advantage_bot", "advantage_prefix")
 	else:
 		if server_points == receiver_points:
-			Voice.say_sequence([POINT_WORDS[server_points], "all"])
+			_speak_sequence([POINT_WORDS[server_points], "all"])
 		else:
-			Voice.say_sequence([POINT_WORDS[server_points], POINT_WORDS[receiver_points]])
+			_speak_sequence([POINT_WORDS[server_points], POINT_WORDS[receiver_points]])
 
 func _announce_stakes_before_serve() -> void:
 	if _would_win_game(points_you + 1, points_bot):
@@ -182,7 +264,7 @@ func _announce_stakes_for(who: String, games_after: int, opp_games: int, sets_af
 		return
 	var is_match_point: bool = sets_after >= 2
 	if who == "you":
-		Voice.say("match_point_you" if is_match_point else "set_point_you")
+		_speak("match_point_you" if is_match_point else "set_point_you")
 	elif is_match_point:
 		_say_bot_prefixed("match_point_bot", "match_point_prefix")
 	else:
@@ -197,7 +279,7 @@ func _win_game(winner: String) -> void:
 		CareerData.add_upgrade_points(1)
 		Voice.say_dynamic(Loc.t("upgrade_point_earned_announcement"))
 	if winner == "you":
-		Voice.say("game_you")
+		_speak("game_you")
 	else:
 		_say_bot_prefixed("game_bot", "game_prefix")
 	if winner == "you":
@@ -205,6 +287,7 @@ func _win_game(winner: String) -> void:
 	else:
 		games_bot += 1
 	server_is_you = not server_is_you
+	_sync_network_score()
 	if games_you == 6 and games_bot == 6:
 		in_tiebreak = true
 		tiebreak_you = 0
@@ -220,7 +303,7 @@ func _award_tiebreak_point(winner: String) -> void:
 		tiebreak_you += 1
 	else:
 		tiebreak_bot += 1
-	Voice.say_sequence(["num_%d" % tiebreak_you, "num_%d" % tiebreak_bot])
+	_speak_sequence(["num_%d" % tiebreak_you, "num_%d" % tiebreak_bot])
 	if (tiebreak_you >= 7 and tiebreak_you - tiebreak_bot >= 2) or (tiebreak_bot >= 7 and tiebreak_bot - tiebreak_you >= 2):
 		var set_winner: String = "you" if tiebreak_you > tiebreak_bot else "bot"
 		if set_winner == "you":
@@ -231,17 +314,19 @@ func _award_tiebreak_point(winner: String) -> void:
 		_win_set(set_winner)
 	else:
 		server_is_you = not server_is_you
+		_sync_network_score()
 		_await_ready_then_serve()
 
 func _win_set(winner: String) -> void:
 	if winner == "you":
-		Voice.say("set_you")
+		_speak("set_you")
 	else:
 		_say_bot_prefixed("set_bot", "set_prefix")
 	if winner == "you":
 		sets_you += 1
 	else:
 		sets_bot += 1
+	_sync_network_score()
 	if sets_you >= 2 or sets_bot >= 2:
 		_win_match(winner)
 	else:
@@ -252,8 +337,12 @@ func _win_match(winner: String) -> void:
 	if CareerRun.active:
 		_handle_career_result(winner)
 		return
-	Voice.say("you_win_match" if winner == "you" else "bot_wins_match")
+	_speak("you_win_match" if winner == "you" else "bot_wins_match")
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_match_over()
 	await get_tree().create_timer(4.0).timeout
+	if NetworkSession.is_networked:
+		NetworkSession.end_session()
 	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
 
 func _handle_career_result(winner: String) -> void:
@@ -281,3 +370,27 @@ func _handle_career_result(winner: String) -> void:
 			Voice.say("career_demoted")
 		await get_tree().create_timer(3.0).timeout
 		get_tree().change_scene_to_file("res://scenes/CareerHub.tscn")
+
+## Mirrors the raw score fields to the client, with "you"/"bot" swapped -
+## the client's own local MatchManager (which never independently computes
+## any of this - see the class doc comment) just stores whatever it's told,
+## so its own unmodified _announce_current_score()/announce_score() reads
+## correctly from its own perspective.
+func _sync_network_score() -> void:
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_score_sync(points_bot, points_you, games_bot, games_you,
+				sets_bot, sets_you, not server_is_you, in_tiebreak, tiebreak_bot, tiebreak_you)
+
+## Called by NetworkSession's net_score_sync RPC on the client.
+func client_apply_score_sync(p_you: int, p_bot: int, g_you: int, g_bot: int, s_you: int, s_bot: int,
+		serve_you: bool, tiebreak: bool, tb_you: int, tb_bot: int) -> void:
+	points_you = p_you
+	points_bot = p_bot
+	games_you = g_you
+	games_bot = g_bot
+	sets_you = s_you
+	sets_bot = s_bot
+	server_is_you = serve_you
+	in_tiebreak = tiebreak
+	tiebreak_you = tb_you
+	tiebreak_bot = tb_bot
