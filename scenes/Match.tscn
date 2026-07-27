@@ -1,0 +1,39 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/MatchManager.gd" id="1_match"]
+[ext_resource type="Script" path="res://scripts/Court.gd" id="2_court"]
+[ext_resource type="Script" path="res://scripts/Ball.gd" id="3_ball"]
+[ext_resource type="Script" path="res://scripts/PlayerController.gd" id="4_player"]
+[ext_resource type="Script" path="res://scripts/BotAI.gd" id="5_bot"]
+[ext_resource type="Script" path="res://scripts/PauseHandler.gd" id="6_pause"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+radius = 0.12
+height = 0.24
+
+[node name="Match" type="Node3D"]
+script = ExtResource("1_match")
+
+[node name="Court" type="Node3D" parent="."]
+script = ExtResource("2_court")
+
+[node name="Ball" type="Node3D" parent="."]
+script = ExtResource("3_ball")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ball"]
+mesh = SubResource("SphereMesh_ball")
+
+[node name="Player" type="Node3D" parent="."]
+script = ExtResource("4_player")
+
+[node name="Bot" type="Node3D" parent="."]
+script = ExtResource("5_bot")
+
+[node name="PauseHandler" type="Node" parent="."]
+script = ExtResource("6_pause")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8, -0.3, 0.5, 0, 0.86, 0.5, -0.6, -0.4, 0.69, 0, 6, 0)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.85, 0.53, 0, -0.53, 0.85, 0, 9, 14)
