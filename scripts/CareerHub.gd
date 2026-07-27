@@ -1,11 +1,12 @@
 extends Control
 ## Career home screen: shows the player's current tier and how close they
 ## are to a demotion, and lists the tournament(s) available at that tier -
-## one for tiers 1-6, the four Grand Slams (with title counts) at tier 7.
-## Tournament buttons are built in code since their number/labels depend on
-## save data, not something worth hand-authoring per tier in the scene file.
-## Text goes through Loc.t()/Loc.tier_name()/Loc.round_name() throughout so
-## it reflects GameSettings.language.
+## one for tiers 1-6 and tier 8 (Hall of Champions), the four Grand Slams
+## (with title counts) at tier 7. Tournament buttons are built in code since
+## their number/labels depend on save data, not something worth hand-
+## authoring per tier in the scene file. Text goes through
+## Loc.t()/Loc.tier_name()/Loc.round_name() throughout so it reflects
+## GameSettings.language.
 
 const RESET_ARM_SECONDS := 5.0
 
@@ -13,6 +14,7 @@ const RESET_ARM_SECONDS := 5.0
 @onready var tier_label: Label = $VBoxContainer/TierLabel
 @onready var losses_label: Label = $VBoxContainer/LossesLabel
 @onready var tournament_buttons: VBoxContainer = $VBoxContainer/TournamentButtons
+@onready var upgrades_button: Button = $VBoxContainer/UpgradesButton
 @onready var back_button: Button = $VBoxContainer/BackButton
 @onready var reset_button: Button = $VBoxContainer/ResetButton
 
@@ -21,6 +23,7 @@ var _reset_armed: bool = false
 func _ready() -> void:
 	get_tree().paused = false
 	Music.stop_music()
+	upgrades_button.pressed.connect(_on_upgrades_pressed)
 	back_button.pressed.connect(_on_back_pressed)
 	reset_button.pressed.connect(_on_reset_pressed)
 	_refresh()
@@ -42,6 +45,10 @@ func _refresh() -> void:
 	else:
 		losses_label.text = Loc.t("career_hub_losses") % [CareerData.losses_at_tier, CareerData.LOSSES_TO_DEMOTE]
 	losses_label.accessibility_name = losses_label.text
+
+	upgrades_button.text = Loc.t("upgrades_button") % CareerData.upgrade_points
+	upgrades_button.accessibility_name = upgrades_button.text
+	upgrades_button.accessibility_description = Loc.t("upgrades_desc")
 
 	back_button.text = Loc.t("back_to_menu_button")
 	back_button.accessibility_name = Loc.t("back_to_menu_button")
@@ -66,16 +73,7 @@ func _refresh() -> void:
 		tournament_buttons.add_child(btn)
 		return
 
-	if tier < CareerTiers.MAX_TIER:
-		var tier_name: String = Loc.tier_name(tier)
-		var btn := Button.new()
-		btn.custom_minimum_size = Vector2(300, 52)
-		btn.text = Loc.t("enter_tier_button") % tier_name
-		btn.accessibility_name = btn.text
-		btn.accessibility_description = Loc.t("enter_tier_desc") % tier_name
-		btn.pressed.connect(_on_enter_tier.bind(tier))
-		tournament_buttons.add_child(btn)
-	else:
+	if tier == CareerTiers.SLAM_TIER:
 		for slam in CareerTiers.GRAND_SLAMS:
 			var count: int = CareerData.slam_title_count(slam)
 			var btn := Button.new()
@@ -86,6 +84,15 @@ func _refresh() -> void:
 			btn.accessibility_description = Loc.t("slam_desc_template") % [count, time_word]
 			btn.pressed.connect(_on_enter_slam.bind(slam))
 			tournament_buttons.add_child(btn)
+	else:
+		var tier_name: String = Loc.tier_name(tier)
+		var btn := Button.new()
+		btn.custom_minimum_size = Vector2(300, 52)
+		btn.text = Loc.t("enter_tier_button") % tier_name
+		btn.accessibility_name = btn.text
+		btn.accessibility_description = Loc.t("enter_tier_desc") % tier_name
+		btn.pressed.connect(_on_enter_tier.bind(tier))
+		tournament_buttons.add_child(btn)
 
 func _on_resume_pressed() -> void:
 	CareerRun.resume_from_save()
@@ -96,8 +103,11 @@ func _on_enter_tier(tier: int) -> void:
 	get_tree().change_scene_to_file("res://scenes/Match.tscn")
 
 func _on_enter_slam(slam_name: String) -> void:
-	CareerRun.start(CareerTiers.MAX_TIER, slam_name)
+	CareerRun.start(CareerTiers.SLAM_TIER, slam_name)
 	get_tree().change_scene_to_file("res://scenes/Match.tscn")
+
+func _on_upgrades_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/CareerUpgrades.tscn")
 
 func _on_back_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")

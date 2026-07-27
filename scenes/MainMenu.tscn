@@ -74,6 +74,13 @@ text = "Settings"
 accessibility_name = "Settings"
 accessibility_description = "Adjust the game's audio volume."
 
+[node name="HelpButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(260, 52)
+text = "Help"
+accessibility_name = "Help"
+accessibility_description = "A detailed guide to playing Echo Padel."
+
 [node name="CheckUpdatesButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(260, 52)

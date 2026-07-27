@@ -30,6 +30,15 @@ class_name PlayerController
 
 const MAX_CHARGE := 1.2
 
+## Career-mode upgrade effects (see CareerUpgrades.gd for spending points,
+## CareerData.gd for the persisted levels) - only ever applied when
+## CareerRun.active, so regular Play/Training are untouched.
+const STRENGTH_UPGRADE_POWER_BONUS := 0.04
+const IQ_UPGRADE_CURVE_MULT_PER_LEVEL := 0.08
+const SPEED_UPGRADE_VISUAL_DURATION_CUT := 0.02
+const BASE_MOVE_VISUAL_DURATION := 0.12
+const MIN_MOVE_VISUAL_DURATION := 0.02
+
 var match_manager: MatchManager
 
 var _charging: bool = false
@@ -43,6 +52,9 @@ func _ready() -> void:
 	_listener.current = true
 	# Player stands at +Z looking toward the net at Z=0, i.e. toward -Z -
 	# that's the default Node3D/AudioListener3D forward, so no rotation needed.
+	if CareerRun.active:
+		move_visual_duration = maxf(BASE_MOVE_VISUAL_DURATION -
+				CareerData.upgrade_speed * SPEED_UPGRADE_VISUAL_DURATION_CUT, MIN_MOVE_VISUAL_DURATION)
 
 func _physics_process(delta: float) -> void:
 	var swinging_held: bool = Input.is_action_pressed("swing")
@@ -93,6 +105,7 @@ func _release_swing() -> void:
 	var shape: Dictionary = _current_shape()
 	shape["power"] = power
 	shape["is_smash"] = false
+	_apply_career_upgrades(shape)
 	ball.attempt_hit("you", current_col, current_row_local, shape)
 
 func _attempt_smash() -> void:
@@ -100,4 +113,16 @@ func _attempt_smash() -> void:
 	var shape: Dictionary = _current_shape()
 	shape["power"] = 1.0
 	shape["is_smash"] = true
+	_apply_career_upgrades(shape)
 	ball.attempt_hit("you", current_col, current_row_local, shape)
+
+## Strength adds a flat bonus to normal-hit power (harmless no-op on a smash,
+## which is already max power) - IQ widens how far a shaped shot lands from
+## center (Ball.gd clamps this back to a legal in-bounds edge, so it's never
+## a downside). Both no-ops outside Career mode.
+func _apply_career_upgrades(shape: Dictionary) -> void:
+	if not CareerRun.active:
+		return
+	var power: float = shape.get("power", 0.5)
+	shape["power"] = clampf(power + CareerData.upgrade_strength * STRENGTH_UPGRADE_POWER_BONUS, 0.0, 1.0)
+	shape["curve_shift_mult"] = 1.0 + CareerData.upgrade_iq * IQ_UPGRADE_CURVE_MULT_PER_LEVEL

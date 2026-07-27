@@ -74,6 +74,9 @@ const SMASH_PEAK := 0.45
 const NET_MIN_POWER := 0.08
 const MISHIT_MAX_POWER := 0.25
 const CURVE_SHIFT := Court.TILE_SIZE * 0.9
+## Career-mode Racket upgrade: added to the player's own receiving grace
+## window per level (see _handle_bounce()) - up to +0.075s at max level.
+const RACKET_UPGRADE_GRACE_BONUS := 0.015
 
 var _hop_state: int = HopState.NONE
 var _vx: float = 0.0
@@ -103,6 +106,7 @@ var hit_window_open: bool = false
 const BALL_NORMAL_COLOR := Color(0.8, 0.95, 0.2)
 const BALL_DOLLY_COLOR := Color(1.0, 0.55, 0.05)
 const FIREWORKS_LIFETIME := 1.2
+const BOUNCE_FLASH_LIFETIME := 0.5
 
 @onready var _mesh: MeshInstance3D = $MeshInstance3D
 var _ball_mat: StandardMaterial3D
@@ -187,7 +191,19 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 		sound_name = "hit"
 		duration = lerp(MAX_DURATION, MIN_DURATION, power)
 		peak_height = lerp(MAX_PEAK, MIN_PEAK, power)
-	var base_x: float = Court.cell_center(target_side_is_player, hitter_col, 0).x + curve * CURVE_SHIFT
+	# curve_shift_mult: Career-mode IQ upgrade bonus (see PlayerController.gd) -
+	# shaped shots land further from center, harder for the bot to reach in
+	# time. Defaults to 1.0 (no change) for the bot's own shots and outside
+	# Career mode - baseline curve behavior (including its existing risk of
+	# sailing out on a hard curve) is untouched. When it *is* upgraded
+	# (mult > 1.0), the extra reach is clamped back to just inside the court
+	# line - IQ always means placing it right at the edge, never an
+	# upgrade that backfires by curving a shot out that would've landed.
+	var curve_shift_mult: float = shape.get("curve_shift_mult", 1.0)
+	var base_x: float = Court.cell_center(target_side_is_player, hitter_col, 0).x + curve * CURVE_SHIFT * curve_shift_mult
+	if curve != 0 and curve_shift_mult > 1.0:
+		var edge: float = Court.COURT_HALF_WIDTH - 0.15
+		base_x = clampf(base_x, -edge, edge)
 
 	var land_row: int
 	var allow_bank: bool
@@ -265,6 +281,38 @@ func _spawn_smash_fireworks(pos: Vector3) -> void:
 	var t: SceneTreeTimer = get_tree().create_timer(FIREWORKS_LIFETIME)
 	t.timeout.connect(particles.queue_free)
 
+## Sighted-player visual only - a small flat burst of dust at ground level on
+## every bounce (both the first "locate" bounce and the second), so a bounce
+## reads as a distinct visible event rather than only being inferable from
+## the ball mesh's continuous arc.
+func _spawn_bounce_flash(pos: Vector3) -> void:
+	var particles := CPUParticles3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.025
+	mesh.height = 0.05
+	particles.mesh = mesh
+	particles.amount = 10
+	particles.lifetime = 0.28
+	particles.one_shot = true
+	particles.explosiveness = 1.0
+	particles.direction = Vector3(0, 1, 0)
+	particles.spread = 65.0
+	particles.gravity = Vector3(0, -6.0, 0)
+	particles.initial_velocity_min = 0.6
+	particles.initial_velocity_max = 1.3
+	particles.scale_amount_min = 0.5
+	particles.scale_amount_max = 1.0
+	particles.color = Color(1.0, 1.0, 1.0, 0.85)
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1.0, 1.0, 1.0, 0.85))
+	grad.add_point(1.0, Color(1.0, 1.0, 1.0, 0.0))
+	particles.color_ramp = grad
+	get_tree().current_scene.add_child(particles)
+	particles.global_position = pos + Vector3(0, 0.02, 0)
+	particles.emitting = true
+	var t: SceneTreeTimer = get_tree().create_timer(BOUNCE_FLASH_LIFETIME)
+	t.timeout.connect(particles.queue_free)
+
 func _launch_flight(from: Vector3, to: Vector3, duration: float, peak_height: float,
 		target_side_is_player: bool, allow_wall_bank: bool, bank_side_is_player: bool = false,
 		is_dolly: bool = false, is_smash: bool = false) -> void:
@@ -321,6 +369,8 @@ func _handle_bounce() -> void:
 		_resolve_fault("out", _opponent_of(_last_hitter))
 		return
 
+	_spawn_bounce_flash(global_position)
+
 	var landed_side_is_player: bool = global_position.z > 0.0
 	var col: int = Court.x_to_col(global_position.x)
 	var row_local: int = Court.z_to_row_local(absf(global_position.z))
@@ -353,6 +403,11 @@ func _handle_bounce() -> void:
 			cont_height = SECOND_BOUNCE_HEIGHT
 			_continuation_duration = SECOND_BOUNCE_DURATION
 			_grace_duration = HIT_WINDOW_GRACE
+		# Racket upgrade (Career mode only, player's own side only) - a
+		# bigger sweet spot means a bit more forgiving timing, not a
+		# shorter/harder-to-read rally, so this only ever widens the window.
+		if landed_side_is_player and CareerRun.active:
+			_grace_duration += CareerData.upgrade_racket * RACKET_UPGRADE_GRACE_BONUS
 		_vx = 0.0
 		_vz = 0.0
 		_vy = 4.0 * cont_height / _continuation_duration

@@ -16,15 +16,21 @@ class_name BotAI
 ## `strength_override` directly (any value, including beyond 1.0), which
 ## takes priority when set (>= 0.0).
 
-@export_enum("easy", "medium", "hard", "pro") var difficulty: String = "medium"
+@export_enum("easy", "medium", "hard", "pro", "elite", "legendary") var difficulty: String = "medium"
 var strength_override: float = -1.0
 
-const DIFFICULTY_STRENGTH := {"easy": 0.0, "medium": 1.0 / 3.0, "hard": 2.0 / 3.0, "pro": 1.0}
+const DIFFICULTY_STRENGTH := {
+	"easy": 0.0, "medium": 1.0 / 3.0, "hard": 2.0 / 3.0, "pro": 1.0,
+	"elite": 1.5, "legendary": 2.0,
+}
 
-## Anchor points on the 0.0-1.0 strength scale - these are exactly today's
-## easy/medium/hard/pro values. Any strength interpolates between the two
-## surrounding anchors, or extrapolates past the last segment's slope for
-## strength > 1.0 (Career's toughest rounds).
+## Anchor points on the strength scale - easy/medium/hard/pro are 0.0-1.0 as
+## before; elite/legendary extend it further for players who've mastered pro,
+## and give Career's Hall of Champions tier (strength ~1.25-1.6, see
+## CareerTiers.gd) something real to interpolate between instead of raw
+## extrapolation past pro. Any strength interpolates between the two
+## surrounding anchors, or extrapolates past the last segment's slope beyond
+## legendary (shouldn't normally happen - legendary is meant to be the top).
 const ANCHORS: Array[Dictionary] = [
 	{"s": 0.0, "reaction": Vector2(0.35, 0.6), "step_interval": 0.28, "miss_chance": 0.35,
 			"shape_skill": 0.15, "power_min": 0.15, "power_max": 0.6, "smash_chance": 0.0},
@@ -34,6 +40,10 @@ const ANCHORS: Array[Dictionary] = [
 			"shape_skill": 0.7, "power_min": 0.5, "power_max": 0.95, "smash_chance": 0.15},
 	{"s": 1.0, "reaction": Vector2(0.03, 0.1), "step_interval": 0.09, "miss_chance": 0.02,
 			"shape_skill": 0.95, "power_min": 0.6, "power_max": 1.0, "smash_chance": 0.3},
+	{"s": 1.5, "reaction": Vector2(0.02, 0.06), "step_interval": 0.07, "miss_chance": 0.0,
+			"shape_skill": 1.0, "power_min": 0.7, "power_max": 1.0, "smash_chance": 0.4},
+	{"s": 2.0, "reaction": Vector2(0.02, 0.04), "step_interval": 0.05, "miss_chance": 0.0,
+			"shape_skill": 1.0, "power_min": 0.85, "power_max": 1.0, "smash_chance": 0.55},
 ]
 
 var _reacting: bool = false

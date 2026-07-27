@@ -189,6 +189,13 @@ func _announce_stakes_for(who: String, games_after: int, opp_games: int, sets_af
 		_say_bot_prefixed("set_point_bot", "set_point_prefix")
 
 func _win_game(winner: String) -> void:
+	# A love game (won without the bot scoring a single point) earns a
+	# Career-mode upgrade point - points_bot/points_you still hold this
+	# game's final tally here, since _start_game()/_start_set() (further
+	# down) are what reset them for the next game.
+	if winner == "you" and points_bot == 0 and CareerRun.active:
+		CareerData.add_upgrade_points(1)
+		Voice.say_dynamic(Loc.t("upgrade_point_earned_announcement"))
 	if winner == "you":
 		Voice.say("game_you")
 	else:

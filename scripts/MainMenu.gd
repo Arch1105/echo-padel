@@ -5,8 +5,9 @@ extends Control
 ## accessibility plugin needed. Text is applied in code via Loc.t() rather
 ## than hardcoded in the scene file, so it reflects GameSettings.language.
 
-const DIFFICULTIES := ["easy", "medium", "hard", "pro"]
-const DIFFICULTY_KEYS := ["difficulty_easy", "difficulty_medium", "difficulty_hard", "difficulty_pro"]
+const DIFFICULTIES := ["easy", "medium", "hard", "pro", "elite", "legendary"]
+const DIFFICULTY_KEYS := ["difficulty_easy", "difficulty_medium", "difficulty_hard", "difficulty_pro",
+		"difficulty_elite", "difficulty_legendary"]
 
 @onready var title_label: Label = $VBoxContainer/Title
 @onready var difficulty_label: Label = $VBoxContainer/DifficultyLabel
@@ -15,6 +16,7 @@ const DIFFICULTY_KEYS := ["difficulty_easy", "difficulty_medium", "difficulty_ha
 @onready var training_button: Button = $VBoxContainer/TrainingButton
 @onready var career_button: Button = $VBoxContainer/CareerButton
 @onready var settings_button: Button = $VBoxContainer/SettingsButton
+@onready var help_button: Button = $VBoxContainer/HelpButton
 @onready var check_updates_button: Button = $VBoxContainer/CheckUpdatesButton
 @onready var exit_button: Button = $VBoxContainer/ExitButton
 
@@ -35,6 +37,7 @@ func _ready() -> void:
 	training_button.pressed.connect(_on_training_pressed)
 	career_button.pressed.connect(_on_career_pressed)
 	settings_button.pressed.connect(_on_settings_pressed)
+	help_button.pressed.connect(_on_help_pressed)
 	check_updates_button.pressed.connect(_on_check_updates_pressed)
 	exit_button.pressed.connect(_on_exit_pressed)
 	play_button.grab_focus()
@@ -74,6 +77,10 @@ func _apply_text() -> void:
 	settings_button.accessibility_name = Loc.t("settings_button")
 	settings_button.accessibility_description = Loc.t("settings_desc")
 
+	help_button.text = Loc.t("help_button")
+	help_button.accessibility_name = Loc.t("help_button")
+	help_button.accessibility_description = Loc.t("help_desc")
+
 	check_updates_button.text = Loc.t("check_updates_button")
 	check_updates_button.accessibility_name = Loc.t("check_updates_button")
 	check_updates_button.accessibility_description = Loc.t("check_updates_desc")
@@ -102,6 +109,9 @@ func _on_settings_pressed() -> void:
 
 func _on_exit_pressed() -> void:
 	get_tree().quit()
+
+func _on_help_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/HelpScreen.tscn")
 
 func _on_check_updates_pressed() -> void:
 	_manual_check_pending = true
