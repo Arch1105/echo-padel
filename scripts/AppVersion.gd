@@ -5,4 +5,4 @@ class_name AppVersion
 ## cut - Updater.gd compares this against the latest GitHub release tag to
 ## decide whether to offer an update.
 
-const CURRENT := "1.1.1"
+const CURRENT := "1.2.0"
