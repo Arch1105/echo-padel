@@ -19,7 +19,7 @@ var stat_buttons: Dictionary = {}
 
 func _ready() -> void:
 	get_tree().paused = false
-	Music.stop_music()
+	Music.play_career_music()
 	stat_buttons = {
 		"strength": $VBoxContainer/StrengthButton,
 		"iq": $VBoxContainer/IqButton,

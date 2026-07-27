@@ -22,7 +22,7 @@ var _reset_armed: bool = false
 
 func _ready() -> void:
 	get_tree().paused = false
-	Music.stop_music()
+	Music.play_career_music()
 	upgrades_button.pressed.connect(_on_upgrades_pressed)
 	back_button.pressed.connect(_on_back_pressed)
 	reset_button.pressed.connect(_on_reset_pressed)

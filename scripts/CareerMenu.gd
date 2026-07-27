@@ -9,7 +9,7 @@ extends Control
 
 func _ready() -> void:
 	get_tree().paused = false
-	Music.stop_music()
+	Music.play_career_music()
 	_apply_text()
 	start_button.pressed.connect(_on_start_pressed)
 	name_input.text_submitted.connect(_on_name_submitted)

@@ -75,8 +75,11 @@ const NET_MIN_POWER := 0.08
 const MISHIT_MAX_POWER := 0.25
 const CURVE_SHIFT := Court.TILE_SIZE * 0.9
 ## Career-mode Racket upgrade: added to the player's own receiving grace
-## window per level (see _handle_bounce()) - up to +0.075s at max level.
-const RACKET_UPGRADE_GRACE_BONUS := 0.015
+## window per level (see _handle_bounce()) - up to +0.3s at MAX_UPGRADE_LEVEL
+## (50, see CareerData.gd). A wider window still only helps *timing* - it
+## doesn't move the player to the right tile or tell them where the ball
+## is - so even fully maxed this stays a real edge, not a guarantee.
+const RACKET_UPGRADE_GRACE_BONUS := 0.3 / 50.0
 
 var _hop_state: int = HopState.NONE
 var _vx: float = 0.0

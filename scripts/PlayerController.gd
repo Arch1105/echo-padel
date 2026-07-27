@@ -31,11 +31,17 @@ class_name PlayerController
 const MAX_CHARGE := 1.2
 
 ## Career-mode upgrade effects (see CareerUpgrades.gd for spending points,
-## CareerData.gd for the persisted levels) - only ever applied when
-## CareerRun.active, so regular Play/Training are untouched.
-const STRENGTH_UPGRADE_POWER_BONUS := 0.04
-const IQ_UPGRADE_CURVE_MULT_PER_LEVEL := 0.08
-const SPEED_UPGRADE_VISUAL_DURATION_CUT := 0.02
+## CareerData.gd for the persisted levels, MAX_UPGRADE_LEVEL=50 there) - only
+## ever applied when CareerRun.active, so regular Play/Training are
+## untouched. Each rate is small per point on purpose - the total at 50
+## points (fully maxed, a serious grind) is meant to feel like a real edge,
+## not a guaranteed win: +0.4 power is a lot but still shy of an automatic
+## max-power shot from a weak charge, and the bot's own difficulty keeps
+## scaling independently with Career tier (see BotAI.gd/CareerTiers.gd), so
+## even a fully maxed character still has a real opponent at the top tiers.
+const STRENGTH_UPGRADE_POWER_BONUS := 0.4 / 50.0
+const IQ_UPGRADE_CURVE_MULT_PER_LEVEL := 1.5 / 50.0
+const SPEED_UPGRADE_VISUAL_DURATION_CUT := 0.1 / 50.0
 const BASE_MOVE_VISUAL_DURATION := 0.12
 const MIN_MOVE_VISUAL_DURATION := 0.02
 

@@ -11,7 +11,7 @@ extends Node
 
 const SAVE_PATH := "user://career_save.json"
 const LOSSES_TO_DEMOTE := 3
-const MAX_UPGRADE_LEVEL := 5
+const MAX_UPGRADE_LEVEL := 50
 const UPGRADE_STATS := ["strength", "iq", "speed", "racket"]
 
 var player_name: String = ""
