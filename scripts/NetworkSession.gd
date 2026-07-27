@@ -102,8 +102,45 @@ func _send_beacon() -> void:
 	if not _searching:
 		return
 	var msg: String = "%s|%d|%s" % [DISCOVERY_MAGIC, _session_id, _local_name]
-	_discovery_socket.set_dest_address("255.255.255.255", DISCOVERY_PORT)
-	_discovery_socket.put_packet(msg.to_utf8_buffer())
+	var data: PackedByteArray = msg.to_utf8_buffer()
+	for addr in _broadcast_addresses():
+		_discovery_socket.set_dest_address(addr, DISCOVERY_PORT)
+		_discovery_socket.put_packet(data)
+
+## Most Windows PCs have several network adapters at once (WiFi, Ethernet,
+## VPN, virtual adapters from Docker/Hyper-V/etc.) - sending only to the
+## generic 255.255.255.255 leaves it up to the OS to pick which adapter to
+## actually send it out on, and it doesn't reliably pick WiFi. Also sending
+## the *subnet-directed* broadcast for every local IPv4 interface makes sure
+## the WiFi segment specifically gets it regardless of that routing choice.
+func _broadcast_addresses() -> Array[String]:
+	var result: Array[String] = ["255.255.255.255"]
+	for iface in IP.get_local_interfaces():
+		for addr in iface.get("addresses", []):
+			var broadcast: String = _subnet_broadcast(addr)
+			if broadcast != "" and not result.has(broadcast):
+				result.append(broadcast)
+	return result
+
+## addr may be plain ("192.168.1.50") or CIDR-noted ("192.168.1.50/24"),
+## depending on Godot version - handles either. Only computes a broadcast for
+## private IPv4 ranges (loopback/link-local/IPv6 are skipped, not useful for
+## LAN discovery here). Always treats it as a /24 regardless of the actual
+## reported prefix - if the real subnet is narrower that just broadcasts a
+## bit wider than strictly necessary within the same physical LAN, harmless.
+func _subnet_broadcast(addr: String) -> String:
+	var ip: String = addr.split("/")[0]
+	var octets: PackedStringArray = ip.split(".")
+	if octets.size() != 4:
+		return ""  # not IPv4 (e.g. an IPv6 address) - skip
+	if ip.begins_with("127.") or ip.begins_with("169.254."):
+		return ""  # loopback/link-local - not useful for LAN discovery
+	var second_octet: int = int(octets[1])
+	var is_private: bool = ip.begins_with("192.168.") or ip.begins_with("10.") or \
+			(ip.begins_with("172.") and second_octet >= 16 and second_octet <= 31)
+	if not is_private:
+		return ""
+	return "%s.%s.%s.255" % [octets[0], octets[1], octets[2]]
 
 func _process(delta: float) -> void:
 	if _searching and _discovery_socket:

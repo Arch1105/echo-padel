@@ -20,6 +20,7 @@ const DIFFICULTY_KEYS := ["difficulty_easy", "difficulty_medium", "difficulty_ha
 @onready var help_button: Button = $VBoxContainer/HelpButton
 @onready var check_updates_button: Button = $VBoxContainer/CheckUpdatesButton
 @onready var exit_button: Button = $VBoxContainer/ExitButton
+@onready var version_label: Label = $VersionLabel
 
 ## True only while a Check for Updates *button press* is in flight - the
 ## silent auto-check on launch shouldn't pop up "you're up to date"/"couldn't
@@ -94,6 +95,9 @@ func _apply_text() -> void:
 	exit_button.text = Loc.t("exit_button")
 	exit_button.accessibility_name = Loc.t("exit_button")
 	exit_button.accessibility_description = Loc.t("exit_desc")
+
+	version_label.text = "v%s" % AppVersion.CURRENT
+	version_label.accessibility_name = Loc.t("version_label_access") % AppVersion.CURRENT
 
 func _on_difficulty_selected(index: int) -> void:
 	GameSettings.difficulty = DIFFICULTIES[index]

@@ -165,6 +165,7 @@ const STRINGS := {
 	"help_settings_body": {"en": "Adjust the master volume and switch between English and Spanish menus and voice from the Settings screen, reachable from the main menu.",
 			"es": "Ajusta el volumen general y cambia entre menús y voz en inglés o español desde la pantalla de Configuración, accesible desde el menú principal."},
 
+	"version_label_access": {"en": "Version %s", "es": "Versión %s"},
 	"play_online_button": {"en": "Play Online (LAN)", "es": "Jugar en línea (red local)"},
 	"play_online_desc": {"en": "Play against someone else on the same WiFi or local network - no internet or account needed.",
 			"es": "Juega contra otra persona en la misma red WiFi o local. No necesitas internet ni cuenta."},
