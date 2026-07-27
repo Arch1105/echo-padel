@@ -15,7 +15,15 @@ const DIFFICULTY_KEYS := ["difficulty_easy", "difficulty_medium", "difficulty_ha
 @onready var training_button: Button = $VBoxContainer/TrainingButton
 @onready var career_button: Button = $VBoxContainer/CareerButton
 @onready var settings_button: Button = $VBoxContainer/SettingsButton
+@onready var check_updates_button: Button = $VBoxContainer/CheckUpdatesButton
 @onready var exit_button: Button = $VBoxContainer/ExitButton
+
+## True only while a Check for Updates *button press* is in flight - the
+## silent auto-check on launch shouldn't pop up "you're up to date"/"couldn't
+## check" noise, only an actually-available update. A manual check always
+## gets some feedback either way, since the player asked for it.
+var _manual_check_pending: bool = false
+var _prompt: UpdatePrompt = null
 
 func _ready() -> void:
 	get_tree().paused = false
@@ -27,8 +35,15 @@ func _ready() -> void:
 	training_button.pressed.connect(_on_training_pressed)
 	career_button.pressed.connect(_on_career_pressed)
 	settings_button.pressed.connect(_on_settings_pressed)
+	check_updates_button.pressed.connect(_on_check_updates_pressed)
 	exit_button.pressed.connect(_on_exit_pressed)
 	play_button.grab_focus()
+
+	Updater.update_check_finished.connect(_on_update_check_finished)
+	Updater.update_check_failed.connect(_on_update_check_failed)
+	Updater.update_download_progress.connect(_on_update_download_progress)
+	Updater.update_failed.connect(_on_update_failed)
+	Updater.check_for_update()
 
 func _apply_text() -> void:
 	title_label.text = "Echo Padel"
@@ -59,6 +74,10 @@ func _apply_text() -> void:
 	settings_button.accessibility_name = Loc.t("settings_button")
 	settings_button.accessibility_description = Loc.t("settings_desc")
 
+	check_updates_button.text = Loc.t("check_updates_button")
+	check_updates_button.accessibility_name = Loc.t("check_updates_button")
+	check_updates_button.accessibility_description = Loc.t("check_updates_desc")
+
 	exit_button.text = Loc.t("exit_button")
 	exit_button.accessibility_name = Loc.t("exit_button")
 	exit_button.accessibility_description = Loc.t("exit_desc")
@@ -83,3 +102,49 @@ func _on_settings_pressed() -> void:
 
 func _on_exit_pressed() -> void:
 	get_tree().quit()
+
+func _on_check_updates_pressed() -> void:
+	_manual_check_pending = true
+	Updater.check_for_update()
+
+func _on_update_check_finished(available: bool, version: String, download_url: String) -> void:
+	if available:
+		_show_prompt()
+		_prompt.show_available(version)
+		_prompt.update_confirmed.connect(func() -> void:
+			_prompt.show_downloading()
+			Updater.begin_update(download_url)
+		, CONNECT_ONE_SHOT)
+		_prompt.dismissed.connect(_close_prompt, CONNECT_ONE_SHOT)
+	elif _manual_check_pending:
+		_show_prompt()
+		_prompt.show_failed("update_up_to_date_message")
+		_prompt.dismissed.connect(_close_prompt, CONNECT_ONE_SHOT)
+	_manual_check_pending = false
+
+func _on_update_check_failed(_reason: String) -> void:
+	if _manual_check_pending:
+		_show_prompt()
+		_prompt.show_failed("update_check_failed_message")
+		_prompt.dismissed.connect(_close_prompt, CONNECT_ONE_SHOT)
+	_manual_check_pending = false
+
+func _on_update_download_progress(fraction: float) -> void:
+	if _prompt:
+		_prompt.set_progress(fraction)
+
+func _on_update_failed(_reason: String) -> void:
+	_show_prompt()
+	_prompt.show_failed("update_download_failed_message")
+	_prompt.dismissed.connect(_close_prompt, CONNECT_ONE_SHOT)
+
+func _show_prompt() -> void:
+	if _prompt:
+		return
+	_prompt = preload("res://scenes/UpdatePrompt.tscn").instantiate()
+	add_child(_prompt)
+
+func _close_prompt() -> void:
+	if _prompt:
+		_prompt.queue_free()
+		_prompt = null

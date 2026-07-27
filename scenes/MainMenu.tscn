@@ -74,6 +74,13 @@ text = "Settings"
 accessibility_name = "Settings"
 accessibility_description = "Adjust the game's audio volume."
 
+[node name="CheckUpdatesButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(260, 52)
+text = "Check for Updates"
+accessibility_name = "Check for Updates"
+accessibility_description = "Check online for a newer version of Echo Padel."
+
 [node name="ExitButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(260, 52)

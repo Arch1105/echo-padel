@@ -81,6 +81,21 @@ const STRINGS := {
 	"reset_career_desc": {"en": "Permanently erase your career progress and start over. Press twice to confirm.",
 			"es": "Borra permanentemente el progreso de tu carrera y empieza de nuevo. Pulsa dos veces para confirmar."},
 	"reset_confirm_button": {"en": "Press again to confirm reset", "es": "Pulsa de nuevo para confirmar"},
+
+	"check_updates_button": {"en": "Check for Updates", "es": "Buscar actualizaciones"},
+	"check_updates_desc": {"en": "Check online for a newer version of Echo Padel.",
+			"es": "Busca en línea una versión más reciente de Echo Padel."},
+	"update_available_message": {"en": "A new update (version %s) is available. Download and install it now? The game will restart.",
+			"es": "Hay una nueva actualización (versión %s) disponible. ¿Descargarla e instalarla ahora? El juego se reiniciará."},
+	"update_now_button": {"en": "Update Now", "es": "Actualizar ahora"},
+	"not_now_button": {"en": "Not Now", "es": "Ahora no"},
+	"ok_button": {"en": "OK", "es": "Aceptar"},
+	"update_downloading_message": {"en": "Downloading update... %d percent.", "es": "Descargando actualización... %d por ciento."},
+	"update_up_to_date_message": {"en": "You already have the latest version.", "es": "Ya tienes la última versión."},
+	"update_check_failed_message": {"en": "Couldn't check for updates. Check your internet connection and try again later.",
+			"es": "No se pudo buscar actualizaciones. Comprueba tu conexión a internet e inténtalo más tarde."},
+	"update_download_failed_message": {"en": "The update download failed. Please try again later.",
+			"es": "No se pudo descargar la actualización. Inténtalo de nuevo más tarde."},
 }
 
 const TIER_NAMES_ES := [
