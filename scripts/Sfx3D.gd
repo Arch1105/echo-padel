@@ -32,10 +32,11 @@ extends Node
 ##     row_pitch_multiplier(), not a subtle interval - deep should sound
 ##     unmistakably different from short, not just "a bit higher."
 ##
-## Bounce, racket, net, and crowd sounds are real recordings (see
+## Bounce, racket, net, wall-bank, and crowd sounds are real recordings (see
 ## tools/generate_tennis_bounce.py, tools/generate_racket_hit.py,
-## tools/generate_net_hit.py, tools/generate_crowd_sounds.py for source/
-## license/trim details) - all explicitly CC0. The bounce is a small pool of
+## tools/generate_net_hit.py, tools/generate_wall_bank.py,
+## tools/generate_crowd_sounds.py for source/license/trim details) - all
+## explicitly CC0. The bounce is a small pool of
 ## isolated clips picked at random for natural variety (same array-of-
 ## variants pattern Bash Royale used for footsteps). The three racket sounds
 ## are each a specific, dedicated recording rather than interchangeable
@@ -60,6 +61,7 @@ const SOUNDS := {
 	"smash": preload("res://audio/sfx/smash_impact.wav"),
 	"mishit": preload("res://audio/sfx/racket_mishit.wav"),
 	"net_hit": preload("res://audio/sfx/net_hit.wav"),
+	"wall_bank": preload("res://audio/sfx/wall_bank.wav"),
 	"cheer": preload("res://audio/sfx/cheer.wav"),
 	"boo": preload("res://audio/sfx/boo.wav"),
 	"ready_chime": preload("res://audio/sfx/ready_chime.wav"),

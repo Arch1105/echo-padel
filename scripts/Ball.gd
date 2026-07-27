@@ -357,6 +357,9 @@ func _integrate(delta: float) -> void:
 				(not _hop_bank_side_is_player and global_position.z <= boundary):
 			global_position.z = 2.0 * boundary - global_position.z
 			_vz = -_vz
+			var bank_bus: String = Sfx3D.NEAR_BUS if _hop_bank_side_is_player else Sfx3D.DISTANT_BUS
+			var bank_volume_db: float = 2.0 if _hop_bank_side_is_player else 0.0
+			Sfx3D.play_at("wall_bank", global_position, bank_volume_db, 1.0, bank_bus)
 
 	if global_position.y <= 0.0 and _vy < 0.0:
 		_handle_bounce()
