@@ -357,6 +357,13 @@ func _lines() -> Dictionary:
 func _phrases() -> Dictionary:
 	return PHRASES_ES if GameSettings.language == "es" else PHRASES_EN
 
+## Public lookup of a single phrase's raw text (current language), or "" if
+## unknown - lets a caller compose its own dynamic (unclippable) sentence out
+## of the same phrase pool say()/say_sequence() draw from. See
+## NetworkSession.gd's LAN opponent-name composition.
+func phrase(key: String) -> String:
+	return _phrases().get(key, "")
+
 ## Speaks a single known line.
 func say(key: String) -> void:
 	say_sequence([key])

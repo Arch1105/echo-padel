@@ -22,10 +22,12 @@ class_name MatchManager
 ## raw score fields the same way, so the client's own local MatchManager -
 ## which never independently computes anything - can still answer its own
 ## Check Score button correctly using the exact same _announce_current_score
-## code, unmodified, just fed mirrored numbers. The client's opponent is
-## still announced with the generic "bot" wording for now (no separate
-## "opponent"-worded clip set exists yet) - a known, easy follow-up, not a
-## functional gap.
+## code, unmodified, just fed mirrored numbers. Whenever an announcement is
+## about the opponent, both devices substitute the opponent's typed name in
+## place of the generic "Bot" wording (see NetworkSession.speak_local_keys())
+## - the name itself never crosses the network, since each device already
+## knows its own opponent's name from the discovery handshake; only the
+## relay's existing timing cue does.
 ##
 ## Every serve (including the very first) waits for a "ready" press (Enter/
 ## Xbox B/PS5 Circle - the same button as a smash, just contextually never
@@ -128,19 +130,29 @@ func _ready() -> void:
 ## --- Speak-and-relay wrappers - see class doc comment. ---
 
 func _speak(key: String) -> void:
-	Voice.say(key)
+	if NetworkSession.is_networked:
+		NetworkSession.speak_local_keys([key])
+	else:
+		Voice.say(key)
 	if NetworkSession.is_networked and NetworkSession.is_host:
 		NetworkSession.relay_speak([key])
 
 func _speak_sequence(keys: Array) -> void:
-	Voice.say_sequence(keys)
+	if NetworkSession.is_networked:
+		NetworkSession.speak_local_keys(keys)
+	else:
+		Voice.say_sequence(keys)
 	if NetworkSession.is_networked and NetworkSession.is_host:
 		NetworkSession.relay_speak(keys)
 
 func _speak_tally(prefix_key: String, count: int, singular_key: String, plural_key: String) -> void:
-	Voice.say_tally(prefix_key, count, singular_key, plural_key)
+	var keys: Array[String] = Voice.tally_keys(prefix_key, count, singular_key, plural_key)
+	if NetworkSession.is_networked:
+		NetworkSession.speak_local_keys(keys)
+	else:
+		Voice.say_tally(prefix_key, count, singular_key, plural_key)
 	if NetworkSession.is_networked and NetworkSession.is_host:
-		NetworkSession.relay_speak(Voice.tally_keys(prefix_key, count, singular_key, plural_key))
+		NetworkSession.relay_speak(keys)
 
 ## Composes "[prefix] [Surname]" (e.g. point_prefix + "Mercer") in Career
 ## mode; otherwise speaks the normal fixed "..._bot" phrase.

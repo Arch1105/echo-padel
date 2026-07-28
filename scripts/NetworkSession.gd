@@ -102,45 +102,8 @@ func _send_beacon() -> void:
 	if not _searching:
 		return
 	var msg: String = "%s|%d|%s" % [DISCOVERY_MAGIC, _session_id, _local_name]
-	var data: PackedByteArray = msg.to_utf8_buffer()
-	for addr in _broadcast_addresses():
-		_discovery_socket.set_dest_address(addr, DISCOVERY_PORT)
-		_discovery_socket.put_packet(data)
-
-## Most Windows PCs have several network adapters at once (WiFi, Ethernet,
-## VPN, virtual adapters from Docker/Hyper-V/etc.) - sending only to the
-## generic 255.255.255.255 leaves it up to the OS to pick which adapter to
-## actually send it out on, and it doesn't reliably pick WiFi. Also sending
-## the *subnet-directed* broadcast for every local IPv4 interface makes sure
-## the WiFi segment specifically gets it regardless of that routing choice.
-func _broadcast_addresses() -> Array[String]:
-	var result: Array[String] = ["255.255.255.255"]
-	for iface in IP.get_local_interfaces():
-		for addr in iface.get("addresses", []):
-			var broadcast: String = _subnet_broadcast(addr)
-			if broadcast != "" and not result.has(broadcast):
-				result.append(broadcast)
-	return result
-
-## addr may be plain ("192.168.1.50") or CIDR-noted ("192.168.1.50/24"),
-## depending on Godot version - handles either. Only computes a broadcast for
-## private IPv4 ranges (loopback/link-local/IPv6 are skipped, not useful for
-## LAN discovery here). Always treats it as a /24 regardless of the actual
-## reported prefix - if the real subnet is narrower that just broadcasts a
-## bit wider than strictly necessary within the same physical LAN, harmless.
-func _subnet_broadcast(addr: String) -> String:
-	var ip: String = addr.split("/")[0]
-	var octets: PackedStringArray = ip.split(".")
-	if octets.size() != 4:
-		return ""  # not IPv4 (e.g. an IPv6 address) - skip
-	if ip.begins_with("127.") or ip.begins_with("169.254."):
-		return ""  # loopback/link-local - not useful for LAN discovery
-	var second_octet: int = int(octets[1])
-	var is_private: bool = ip.begins_with("192.168.") or ip.begins_with("10.") or \
-			(ip.begins_with("172.") and second_octet >= 16 and second_octet <= 31)
-	if not is_private:
-		return ""
-	return "%s.%s.%s.255" % [octets[0], octets[1], octets[2]]
+	_discovery_socket.set_dest_address("255.255.255.255", DISCOVERY_PORT)
+	_discovery_socket.put_packet(msg.to_utf8_buffer())
 
 func _process(delta: float) -> void:
 	if _searching and _discovery_socket:
@@ -347,12 +310,47 @@ func relay_rumble(weak_magnitude: float, strong_magnitude: float, duration: floa
 
 ## --- Voice/announcement relay: host -> client, with you/bot perspective flip ---
 
+## Maps a fixed "opponent did X" key to the phrase spoken before the name
+## (e.g. "point_bot" -> "point_prefix", so it reads "Point, <name>." - the
+## exact same shape Career mode already uses for its surname clips).
+const NAMED_BOT_KEYS := {
+	"point_bot": "point_prefix", "game_bot": "game_prefix", "set_bot": "set_prefix",
+	"match_point_bot": "match_point_prefix", "set_point_bot": "set_point_prefix",
+	"advantage_bot": "advantage_prefix",
+}
+
+## Speaks an already-local-perspective key list (i.e. flipped for whichever
+## device is speaking, if it's the client). Whenever the announcement is
+## about the opponent - a "_bot"-suffixed event, "bot_serve", or a "bot_
+## prefix" tally - substitutes the real opponent name in place of the
+## generic "Bot" wording. Both devices already know their own opponent's
+## name independently from the discovery handshake (see opponent_name), so
+## no name text ever needs to cross the network here - only the existing
+## relay's timing cue does, same as before this substitution existed.
+func speak_local_keys(keys: Array) -> void:
+	if not is_networked or keys.is_empty():
+		Voice.say_sequence(keys)
+		return
+	if keys.size() == 1 and NAMED_BOT_KEYS.has(keys[0]):
+		Voice.say_dynamic("%s %s" % [Voice.phrase(NAMED_BOT_KEYS[keys[0]]), opponent_name])
+		return
+	if keys.size() == 1 and keys[0] == "bot_serve":
+		Voice.say_dynamic("%s %s" % [opponent_name, Voice.phrase("serves_suffix")])
+		return
+	if keys[0] == "bot_prefix":
+		var parts: Array[String] = [opponent_name]
+		for i in range(1, keys.size()):
+			parts.append(Voice.phrase(keys[i]))
+		Voice.say_dynamic(" ".join(parts))
+		return
+	Voice.say_sequence(keys)
+
 @rpc("authority", "reliable")
 func net_speak(keys: Array) -> void:
 	var flipped: Array = []
 	for k in keys:
 		flipped.append(flip_you_bot_key(k))
-	Voice.say_sequence(flipped)
+	speak_local_keys(flipped)
 
 func relay_speak(keys: Array) -> void:
 	if is_networked and is_host:
@@ -370,6 +368,7 @@ static func flip_you_bot_key(key: String) -> String:
 	var swaps := {
 		"you_win_match": "bot_wins_match", "bot_wins_match": "you_win_match",
 		"you_prefix": "bot_prefix", "bot_prefix": "you_prefix",
+		"your_serve": "bot_serve", "bot_serve": "your_serve",
 	}
 	if swaps.has(key):
 		return swaps[key]

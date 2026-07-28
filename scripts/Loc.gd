@@ -177,6 +177,13 @@ const STRINGS := {
 	"lan_connected_message": {"en": "Connected to %s. Starting the match.", "es": "Conectado con %s. Comenzando el partido."},
 	"lan_failed_message": {"en": "Couldn't connect. Check you're both on the same network and try again.",
 			"es": "No se pudo conectar. Comprueba que ambos estén en la misma red e inténtalo de nuevo."},
+	"lan_name_prompt": {"en": "Enter your name. Your opponent will hear it announced during the match.",
+			"es": "Escribe tu nombre. Tu rival lo escuchará durante el partido."},
+	"lan_name_input_desc": {"en": "Type the name your opponent will hear during the match.",
+			"es": "Escribe el nombre que tu rival escuchará durante el partido."},
+	"lan_search_button": {"en": "Search for a Player", "es": "Buscar jugador"},
+	"lan_search_desc": {"en": "Start searching your local network for another Echo Padel player.",
+			"es": "Empieza a buscar a otro jugador de Echo Padel en tu red local."},
 }
 
 const TIER_NAMES_ES := [
