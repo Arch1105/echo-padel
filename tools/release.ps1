@@ -23,6 +23,16 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
+# Some shells start with a stale PATH that predates the GitHub CLI install -
+# fall back to its default install location so `gh release create` below
+# doesn't silently fail after the tag has already been pushed.
+if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+    $ghDefault = "C:\Program Files\GitHub CLI"
+    if (Test-Path (Join-Path $ghDefault "gh.exe")) {
+        $env:Path = "$ghDefault;$env:Path"
+    }
+}
+
 $godot = Join-Path $root "tools\godot\Godot_v4.7.1-stable_win64_console.exe"
 $buildDir = Join-Path $root "build\windows"
 $exePath = Join-Path $buildDir "EchoPadel.exe"
