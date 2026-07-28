@@ -32,16 +32,21 @@ class_name Ball
 ## speaks fault reasons/score (MatchManager.gd) exactly once per point, via
 ## the point_resolved signal below.
 ##
-## Three shot types: a smash (its own dedicated button, see
+## Four shot types: a smash (its own dedicated button, see
 ## PlayerController.gd/BotAI.gd - not just "hold the normal swing longer")
 ## is a forced, guaranteed-max, extra-fast/flat blast whose bounces on the
 ## *receiving* side are also fast and give a tight, hard-but-not-impossible
 ## hit window - genuinely difficult to return, by design, for whichever
-## side receives it (player or bot); a mishit (any hit below a low-power
-## floor, whether under-charged or the bot rolled one) "dollies" up into a
-## weak, high, slow ball instead - both of its bounces on the receiving side
-## are elongated to match, a real sitter that's easy to attack; anything
-## else is a normal hit, exactly as before.
+## side receives it (player or bot); a drop shot (also its own dedicated
+## button - see PlayerController.gd) always lands in the front row near the
+## net regardless of held direction, with its own noticeably higher net-fault
+## floor than a normal shot (a real dink is meant to risk clipping the net)
+## and its own distinct sound, never classified as a mishit even at very low
+## power; a mishit (any *normal* hit below a low-power floor, whether
+## under-charged or the bot rolled one) "dollies" up into a weak, high, slow
+## ball instead - both of its bounces on the receiving side are elongated to
+## match, a real sitter that's easy to attack; anything else is a normal hit,
+## exactly as before.
 
 signal bounced(side_is_player: bool, col: int, row_local: int, bounce_number: int)
 signal returned(by: String)
@@ -72,6 +77,10 @@ const MAX_PEAK := 1.8
 const SMASH_DURATION := 0.32
 const SMASH_PEAK := 0.45
 const NET_MIN_POWER := 0.08
+## A drop shot risks the net on purpose - a genuine dink barely clears it, so
+## this floor sits well above the normal-shot one (and above MISHIT_MAX_POWER
+## too, since a drop shot never gets classified as a mishit - see attempt_hit).
+const DROP_SHOT_NET_MIN_POWER := 0.22
 const MISHIT_MAX_POWER := 0.25
 const CURVE_SHIFT := Court.TILE_SIZE * 0.9
 ## Career-mode Racket upgrade: added to the player's own receiving grace
@@ -152,9 +161,11 @@ func start_serve(server_side_is_player: bool, server_col: int, server_row_local:
 	_launch_flight(from, to, SERVE_DURATION, SERVE_PEAK, target_side_is_player, false)
 
 ## by: "you"/"bot". shape: {power: 0..1, curve: -1/0/1, depth: -1/0/1,
-## is_smash: bool} (curve: -1 left, 1 right - depth: -1 back/deep bank,
-## 1 forward/short, 0 flat). hitter_col/hitter_row_local: the hitter's own
-## current tile (shot origin).
+## is_smash: bool, is_drop_shot: bool} (curve: -1 left, 1 right - depth: -1
+## back/deep bank, 1 forward/short, 0 flat - is_drop_shot forces depth to 1
+## regardless of what was passed, see PlayerController.gd's dedicated drop
+## shot button). hitter_col/hitter_row_local: the hitter's own current tile
+## (shot origin).
 func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dictionary) -> bool:
 	if is_puppet:
 		return false  # the client's puppet Ball never resolves hits itself - see NetworkSession.submit_hit
@@ -177,13 +188,15 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 	hit_window_open = false
 	_hop_state = HopState.NONE
 
+	var is_drop_shot: bool = shape.get("is_drop_shot", false)
 	var power: float = clampf(shape.get("power", 0.5), 0.0, 1.0)
 	var curve: int = clampi(shape.get("curve", 0), -1, 1)
-	var depth: int = clampi(shape.get("depth", 0), -1, 1)
+	var depth: int = 1 if is_drop_shot else clampi(shape.get("depth", 0), -1, 1)
 	var from: Vector3 = Court.cell_center(hitter_side_is_player, hitter_col, hitter_row_local) + Vector3(0, 0.9, 0)
 	var target_side_is_player: bool = not hitter_side_is_player
 
-	if not is_smash and power < NET_MIN_POWER:
+	var net_min_power: float = DROP_SHOT_NET_MIN_POWER if is_drop_shot else NET_MIN_POWER
+	if not is_smash and power < net_min_power:
 		_play_and_relay("net_hit", from, 2.0, 1.0, Sfx3D.NEAR_BUS if hitter_side_is_player else Sfx3D.DISTANT_BUS)
 		_resolve_fault("into_net", _opponent_of(by))
 		return true
@@ -196,6 +209,12 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 		sound_name = "smash"
 		duration = SMASH_DURATION
 		peak_height = SMASH_PEAK
+	elif is_drop_shot:
+		# Never classified as a mishit/dolly - a drop shot is deliberately
+		# soft, that's not the same thing as a poorly-timed normal swing.
+		sound_name = "drop_shot"
+		duration = lerp(MAX_DURATION, MIN_DURATION, power)
+		peak_height = lerp(MAX_PEAK, MIN_PEAK, power)
 	elif power < MISHIT_MAX_POWER:
 		sound_name = "mishit"
 		is_dolly = true
@@ -251,6 +270,8 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 			Sfx3D.rumble_smash()
 		elif sound_name == "mishit":
 			Sfx3D.rumble(0.15, 0.1, 0.06)
+		elif sound_name == "drop_shot":
+			Sfx3D.rumble(0.2, 0.15, 0.08)
 		else:
 			Sfx3D.rumble(0.3, 0.9, 0.15)
 	else:

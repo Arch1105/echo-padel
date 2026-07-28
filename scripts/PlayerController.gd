@@ -12,17 +12,29 @@ class_name PlayerController
 ## otherwise, so it's not just a free "always hit hardest" option. Pressing
 ## smash cancels any in-progress normal charge.
 ##
-## Either way, whichever direction is held *at release/press* shapes the
-## shot: Left/Right = spin, Back = played off your own back wall first (real
-## padel technique) then carried over the net, Forward = short drop shot near
-## the net, none = flat straight shot. On a controller, shot shaping instead
-## reads the *right* stick (shape_left/right/forward/back) so it's
-## independent of the left stick's movement, matching the keyboard's arrow
-## keys doing double duty only because there's nothing else to hold.
+## Right Shift (or a controller's right trigger) is a third, separate
+## dedicated drop shot - always lands in the front row near the net, no
+## matter what direction is held, unlike the Forward-shape short shot below
+## (added because that one turned out too easy to never discover/use by
+## accident). Same hold-to-charge power curve as a normal shot - a short tap
+## is a genuine soft dink (more likely to clatter into the net, since it's
+## barely clearing it on purpose), a longer hold is a firmer short ball that's
+## still returnable but with less margin for the returner to get there in
+## time. Spin (Left/Right) still applies while charging one. Charging a drop
+## shot and charging a normal shot are mutually exclusive - starting either
+## one cancels the other, same as smash already cancels a normal charge.
 ##
-## Movement is suppressed while Space is held - arrow keys are read as shot
-## shaping during a charge, not as movement, so charging a curved shot
-## doesn't also shuffle the player sideways.
+## Either way, whichever direction is held *at release/press* shapes a normal
+## shot or smash: Left/Right = spin, Back = played off your own back wall
+## first (real padel technique) then carried over the net, Forward = short
+## drop shot near the net, none = flat straight shot. On a controller, shot
+## shaping instead reads the *right* stick (shape_left/right/forward/back) so
+## it's independent of the left stick's movement, matching the keyboard's
+## arrow keys doing double duty only because there's nothing else to hold.
+##
+## Movement is suppressed while Space or the drop-shot button is held -
+## arrow keys are read as shot shaping during a charge, not as movement, so
+## charging a curved shot doesn't also shuffle the player sideways.
 ##
 ## No audio feedback plays during a normal charge (per playtest feedback,
 ## the soundscape is kept to just hits/bounces/point outcomes) - you gauge
@@ -49,6 +61,8 @@ var match_manager: MatchManager
 
 var _charging: bool = false
 var _charge_elapsed: float = 0.0
+var _drop_charging: bool = false
+var _drop_charge_elapsed: float = 0.0
 @onready var _listener: AudioListener3D = AudioListener3D.new()
 
 func _ready() -> void:
@@ -64,8 +78,9 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	var swinging_held: bool = Input.is_action_pressed("swing")
+	var drop_shot_held: bool = Input.is_action_pressed("drop_shot")
 
-	if not swinging_held:
+	if not swinging_held and not drop_shot_held:
 		if Input.is_action_just_pressed("move_left"):
 			_do_move(-1, 0)
 		elif Input.is_action_just_pressed("move_right"):
@@ -76,6 +91,7 @@ func _physics_process(delta: float) -> void:
 			_do_move(0, 1)
 
 	if Input.is_action_just_pressed("swing"):
+		_drop_charging = false
 		_charging = true
 		_charge_elapsed = 0.0
 	elif _charging and swinging_held:
@@ -83,7 +99,17 @@ func _physics_process(delta: float) -> void:
 	elif Input.is_action_just_released("swing") and _charging:
 		_release_swing()
 
+	if Input.is_action_just_pressed("drop_shot"):
+		_charging = false
+		_drop_charging = true
+		_drop_charge_elapsed = 0.0
+	elif _drop_charging and drop_shot_held:
+		_drop_charge_elapsed += delta
+	elif Input.is_action_just_released("drop_shot") and _drop_charging:
+		_release_drop_shot()
+
 	if Input.is_action_just_pressed("smash"):
+		_drop_charging = false
 		_attempt_smash()
 
 	if Input.is_action_just_pressed("check_score") and match_manager:
@@ -91,6 +117,7 @@ func _physics_process(delta: float) -> void:
 
 func cancel_charge() -> void:
 	_charging = false
+	_drop_charging = false
 
 ## In a LAN match (see NetworkSession.gd), applies locally right away for
 ## responsiveness (move() always succeeds within the grid, so there's no
@@ -130,6 +157,22 @@ func _attempt_smash() -> void:
 	var shape: Dictionary = _current_shape()
 	shape["power"] = 1.0
 	shape["is_smash"] = true
+	_apply_career_upgrades(shape)
+	_submit_hit(shape)
+
+## Always lands in the front row (depth forced to 1, overriding whatever
+## _current_shape() read for depth) regardless of held direction - spin
+## (curve) still applies. Power still comes from hold duration same as a
+## normal shot; Ball.gd is what turns "less power" into "more of a genuine
+## dink, but more net risk" for this shot type specifically.
+func _release_drop_shot() -> void:
+	_drop_charging = false
+	var power: float = clampf(_drop_charge_elapsed / MAX_CHARGE, 0.0, 1.0)
+	var shape: Dictionary = _current_shape()
+	shape["power"] = power
+	shape["is_smash"] = false
+	shape["depth"] = 1
+	shape["is_drop_shot"] = true
 	_apply_career_upgrades(shape)
 	_submit_hit(shape)
 

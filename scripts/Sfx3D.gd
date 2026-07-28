@@ -35,18 +35,20 @@ extends Node
 ## Bounce, racket, net, wall-bank, and crowd sounds are real recordings (see
 ## tools/generate_tennis_bounce.py, tools/generate_racket_hit.py,
 ## tools/generate_net_hit.py, tools/generate_wall_bank.py,
-## tools/generate_crowd_sounds.py for source/license/trim details) - all
-## explicitly CC0. The bounce is a small pool of
+## tools/generate_crowd_sounds.py, tools/generate_drop_shot.py for source/
+## license/trim details) - all explicitly CC0. The bounce is a small pool of
 ## isolated clips picked at random for natural variety (same array-of-
-## variants pattern Bash Royale used for footsteps). The three racket sounds
-## are each a specific, dedicated recording rather than interchangeable
+## variants pattern Bash Royale used for footsteps). The racket sounds are
+## each a specific, dedicated recording rather than interchangeable
 ## variants - "hit" (a clean return), "smash" (the dedicated smash button -
 ## see PlayerController.gd/BotAI.gd - layered with a synthesized boom/
-## shimmer for extra weight, see tools/generate_smash_impact.py), and
-## "mishit" (a weak, under-powered return that "dollies" up into an easy,
-## slow ball - see Ball.gd). Crowd cheer/boo replaced the earlier
-## procedurally-synthesized versions per feedback asking for something more
-## realistic.
+## shimmer for extra weight, see tools/generate_smash_impact.py), "mishit"
+## (a weak, under-powered return that "dollies" up into an easy, slow ball -
+## see Ball.gd), and "drop_shot" (the dedicated drop-shot button - see
+## PlayerController.gd - a genuinely soft racket tap, from a different source
+## recording than the other three so it reads as its own distinct sound, not
+## a re-pitched one). Crowd cheer/boo replaced the earlier procedurally-
+## synthesized versions per feedback asking for something more realistic.
 
 const BOUNCE_SOUNDS := [
 	preload("res://audio/sfx/tennis_bounce_00.wav"),
@@ -60,6 +62,7 @@ const SOUNDS := {
 	"hit": preload("res://audio/sfx/racket_hit.wav"),
 	"smash": preload("res://audio/sfx/smash_impact.wav"),
 	"mishit": preload("res://audio/sfx/racket_mishit.wav"),
+	"drop_shot": preload("res://audio/sfx/drop_shot.wav"),
 	"net_hit": preload("res://audio/sfx/net_hit.wav"),
 	"wall_bank": preload("res://audio/sfx/wall_bank.wav"),
 	"cheer": preload("res://audio/sfx/cheer.wav"),

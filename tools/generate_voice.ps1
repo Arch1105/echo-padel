@@ -1,6 +1,12 @@
 # Generates spoken voice-line WAV assets for Echo Padel (English) using the
 # built-in Windows speech synthesizer (System.Speech). No internet or extra
 # install needed. Run once (or whenever lines change): powershell -File tools/generate_voice.ps1
+#
+# SUPERSEDED as the source of the shipped English clips by
+# tools/generate_voice_en.py (edge-tts, a cooler/faster/male voice per
+# feedback - this machine's only installed SAPI voices are both female).
+# Kept only as a no-internet-needed fallback if edge-tts is ever unavailable;
+# keep its $lines in sync with generate_voice_en.py's LINES if either changes.
 # Spanish clips are generated separately by tools/generate_voice_es.py (no
 # Spanish SAPI voice is installed on this machine, so those use neural TTS
 # via edge-tts instead - see that script for details).

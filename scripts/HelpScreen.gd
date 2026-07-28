@@ -18,6 +18,7 @@ const SECTIONS := [
 	["help_movement_heading", "help_movement_body"],
 	["help_hitting_heading", "help_hitting_body"],
 	["help_smash_heading", "help_smash_body"],
+	["help_drop_shot_heading", "help_drop_shot_body"],
 	["help_shaping_heading", "help_shaping_body"],
 	["help_sounds_heading", "help_sounds_body"],
 	["help_serving_heading", "help_serving_body"],

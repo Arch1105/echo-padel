@@ -5,7 +5,7 @@ extends Node
 ## controller client DLL, since GDScript has no native FFI) so it comes out
 ## in NVDA's own voice/rate/verbosity the player already has tuned. If NVDA
 ## isn't running, it falls back to the pre-rendered clips (see
-## tools/generate_voice.ps1 for English, tools/generate_voice_es.py for
+## tools/generate_voice_en.py for English, tools/generate_voice_es.py for
 ## Spanish) so the game is still fully voiced without a screen reader.
 ##
 ## Bilingual (English/Spanish) - GameSettings.language picks which of
