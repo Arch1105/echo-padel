@@ -1,12 +1,23 @@
 extends Node
-## LAN multiplayer session: auto-discovery (UDP broadcast/listen - no manual
-## IP entry, since typing/reading an IP address is a poor fit for a
-## screen-reader-first game) pairs two devices on the same WiFi/local
-## network, deterministically picks a host (lower session id), and sets up a
-## Godot ENetMultiplayerPeer connection between them. No internet/external
-## server involved - true internet-wide "search for any player" matchmaking
-## would need at least a small rendezvous server, which is a deliberately
-## separate, later phase from this LAN mode.
+## LAN multiplayer session: direct "Create Room" / "Join Room" connection
+## between two devices on the same WiFi/local network, using a Godot
+## ENetMultiplayerPeer. No internet/external server involved - true
+## internet-wide "search for any player" matchmaking would need at least a
+## small rendezvous server, which is a deliberately separate, later phase
+## from this LAN mode.
+##
+## Earlier versions of this file used zero-config UDP broadcast discovery
+## instead (so neither player ever had to read/type a network address) - it
+## worked in testing, but repeatedly failed to find a real match on at least
+## one real household network across several separate fix attempts (broadcast
+## targeting, then progressively longer timeouts). Broadcast packets
+## (255.255.255.255) are commonly blocked or not forwarded by consumer
+## routers/access points in a way that a normal direct connection to a known
+## address is not, which fits that pattern of symptoms. This version sidesteps
+## broadcast entirely: whoever creates a room is unambiguously the host (no
+## more "lowest random id wins" race), and the "room code" the other player
+## types in is simply the host's own local network address - a direct
+## connection, not a broadcast, so it isn't subject to the same failure mode.
 ##
 ## Everything gameplay-relevant is host-authoritative: the host runs the
 ## real Ball/MatchManager simulation exactly as single-player; the client is
@@ -25,51 +36,29 @@ signal opponent_connected
 signal connection_failed(reason: String)
 signal opponent_disconnected
 
-const DISCOVERY_PORT := 58271
 const GAME_PORT := 58272
-const DISCOVERY_BEACON_INTERVAL := 0.75
-const DISCOVERY_MAGIC := "ECHOPADEL_LAN_V1"
-## Also loosened alongside DISCOVERY_TIMEOUT below - opening the actual game
-## connection (a different socket/port than discovery) can trigger its own
-## fresh Windows Firewall prompt on a device that hasn't been asked before
-## (including after an auto-update, since the .exe file itself changed) -
-## 8 seconds isn't much time to notice and click "Allow" before this used to
-## give up right underneath them.
-const CONNECT_TIMEOUT := 30.0
-## Unlike the connect phase (CONNECT_TIMEOUT above), pure discovery -
-## broadcasting and listening for a beacon, before either device is even
-## found - previously had no timeout at all, so if beacons genuinely weren't
-## reaching each other it just said "still searching" forever with no clear
-## failure. This gives it an explicit failure after a generous wait, so a
-## real problem at least surfaces instead of hanging silently.
-##
-## Deliberately very generous (a few minutes, not tens of seconds) - two
-## non-technical players coordinating "ok, you press search now... ok, now
-## me" over voice/text can easily take longer than a minute to both land on
-## this screen, and a timeout firing on one device while the other hasn't
-## started searching yet would look exactly like "it doesn't connect" even
-## though nothing was actually wrong - a real regression this project hit
-## once already at a shorter value. This is meant as a distant safety net
-## for a genuinely dead search, not a tight timer.
-const DISCOVERY_TIMEOUT := 180.0
+## Also covers "nobody joined the room in time" on the hosting side, and
+## "that room code didn't answer" on the joining side - opening the game
+## connection can trigger its own fresh Windows Firewall prompt on a device
+## that hasn't been asked before (including right after an auto-update,
+## since the .exe file itself changed), and two non-technical players
+## coordinating "ok, create a room... ok, now I'll type the code in" over
+## voice/text can genuinely take a couple of minutes - so this is
+## deliberately generous rather than a tight timer.
+const CONNECT_TIMEOUT := 180.0
 
 var is_networked: bool = false
 var is_host: bool = false
 var opponent_name: String = ""
-## Set by the caller (see OnlineModeSelect.gd) *before* begin_search() - the
-## host's own value always wins once connected (see _handle_beacon()), since
-## only the host actually runs the match's scoring logic. A client's own
-## pre-connection preference is discarded in favor of whatever the host
-## chose, so both devices always agree on which rules the match is using.
+## Set by the caller (see OnlineModeSelect.gd) *before* create_room() - only
+## meaningful on the host, since only the host actually runs the match's
+## scoring logic. Whoever joins adopts the host's choice instead of their own
+## pre-connection preference once connected (see net_room_info()), so both
+## devices always agree on which rules the match is using.
 var quick_mode: bool = false
 var remote_ready_received: bool = false
 
-var _discovery_socket: PacketPeerUDP
-var _beacon_timer: Timer
-var _session_id: int = 0
 var _local_name: String = ""
-var _searching: bool = false
-var _search_elapsed: float = 0.0
 var _pending_connect: bool = false
 var _connect_timeout_elapsed: float = 0.0
 
@@ -81,24 +70,87 @@ var _local_puppet_paddle: PaddleCharacter = null # client: represents the host's
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
-func begin_search(local_name: String) -> void:
+## The address shown/spoken to the hosting player as their "room code" - the
+## other player types this into Join Room. Prefers a private LAN-range IPv4
+## address (192.168.x.x / 10.x.x.x / 172.16-31.x.x) from a "normal-looking"
+## network adapter, since a device can have several addresses at once
+## (WiFi, Ethernet, VPN, virtual adapters from Hyper-V/VirtualBox/WSL etc.)
+## and only the one actually shared with the other player's device over
+## WiFi/LAN will work. Returns "" if nothing plausible was found (e.g. no
+## network connection at all).
+static func local_room_code() -> String:
+	var preferred: Array[String] = []
+	var fallback: Array[String] = []
+	var deprioritized_keywords := ["virtual", "vmware", "vbox", "hyper-v", "loopback", "tunnel", "docker", "wsl", "bluetooth"]
+	for iface in IP.get_local_interfaces():
+		var iface_label: String = "%s %s" % [iface.get("name", ""), iface.get("friendly", "")]
+		var is_deprioritized: bool = false
+		for keyword in deprioritized_keywords:
+			if iface_label.to_lower().find(keyword) != -1:
+				is_deprioritized = true
+				break
+		for addr in iface.get("addresses", []):
+			var ip: String = str(addr).split("/")[0]
+			if _is_private_ipv4(ip):
+				if is_deprioritized:
+					fallback.append(ip)
+				else:
+					preferred.append(ip)
+	if not preferred.is_empty():
+		return preferred[0]
+	if not fallback.is_empty():
+		return fallback[0]
+	return ""
+
+static func _is_private_ipv4(ip: String) -> bool:
+	var octets: PackedStringArray = ip.split(".")
+	if octets.size() != 4:
+		return false
+	if ip.begins_with("169.254.") or ip.begins_with("127."):
+		return false
+	if ip.begins_with("192.168.") or ip.begins_with("10."):
+		return true
+	if ip.begins_with("172."):
+		var second: int = int(octets[1])
+		return second >= 16 and second <= 31
+	return false
+
+## Becomes the host - starts listening immediately and waits for the other
+## player to Join Room with the address from local_room_code().
+func create_room(local_name: String) -> void:
 	_reset_state()
 	is_networked = true
+	is_host = true
 	_local_name = local_name
-	_session_id = randi()
-	_searching = true
-	_discovery_socket = PacketPeerUDP.new()
-	_discovery_socket.set_broadcast_enabled(true)
-	var err: int = _discovery_socket.bind(DISCOVERY_PORT)
+	var peer := ENetMultiplayerPeer.new()
+	var err: int = peer.create_server(GAME_PORT, 1)
 	if err != OK:
-		connection_failed.emit("bind_failed")
+		connection_failed.emit("server_failed")
 		return
-	_beacon_timer = Timer.new()
-	_beacon_timer.wait_time = DISCOVERY_BEACON_INTERVAL
-	_beacon_timer.timeout.connect(_send_beacon)
-	add_child(_beacon_timer)
-	_beacon_timer.start()
-	_send_beacon()
+	multiplayer.multiplayer_peer = peer
+	multiplayer.peer_connected.connect(_on_peer_connected)
+	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	_pending_connect = true
+	_connect_timeout_elapsed = 0.0
+	set_process(true)
+
+## Becomes the client, connecting directly to another device's room code.
+func join_room(local_name: String, room_code: String) -> void:
+	_reset_state()
+	is_networked = true
+	is_host = false
+	_local_name = local_name
+	var peer := ENetMultiplayerPeer.new()
+	var err: int = peer.create_client(room_code, GAME_PORT)
+	if err != OK:
+		connection_failed.emit("client_failed")
+		return
+	multiplayer.multiplayer_peer = peer
+	multiplayer.connected_to_server.connect(_on_connected_to_server)
+	multiplayer.connection_failed.connect(_on_connection_failed)
+	multiplayer.server_disconnected.connect(_on_peer_disconnected)
+	_pending_connect = true
+	_connect_timeout_elapsed = 0.0
 	set_process(true)
 
 func cancel_search() -> void:
@@ -110,17 +162,8 @@ func end_session() -> void:
 func _reset_state() -> void:
 	is_networked = false
 	is_host = false
-	_searching = false
-	_search_elapsed = 0.0
 	_pending_connect = false
 	remote_ready_received = false
-	if _beacon_timer:
-		_beacon_timer.stop()
-		_beacon_timer.queue_free()
-		_beacon_timer = null
-	if _discovery_socket:
-		_discovery_socket.close()
-		_discovery_socket = null
 	if multiplayer.multiplayer_peer:
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
@@ -128,86 +171,39 @@ func _reset_state() -> void:
 	_local_puppet_paddle = null
 	set_process(false)
 
-func _send_beacon() -> void:
-	if not _searching:
-		return
-	var msg: String = "%s|%d|%s|%d" % [DISCOVERY_MAGIC, _session_id, _local_name, int(quick_mode)]
-	_discovery_socket.set_dest_address("255.255.255.255", DISCOVERY_PORT)
-	_discovery_socket.put_packet(msg.to_utf8_buffer())
-
 func _process(delta: float) -> void:
-	if _searching and _discovery_socket:
-		_search_elapsed += delta
-		if _search_elapsed > DISCOVERY_TIMEOUT:
-			_searching = false
-			_search_elapsed = 0.0
-			if _beacon_timer:
-				_beacon_timer.stop()
-			connection_failed.emit("discovery_timeout")
-			return
-		while _discovery_socket.get_available_packet_count() > 0:
-			var packet: PackedByteArray = _discovery_socket.get_packet()
-			var sender_ip: String = _discovery_socket.get_packet_ip()
-			_handle_beacon(packet.get_string_from_utf8(), sender_ip)
 	if _pending_connect:
 		_connect_timeout_elapsed += delta
 		if _connect_timeout_elapsed > CONNECT_TIMEOUT:
 			_pending_connect = false
 			connection_failed.emit("timeout")
 
-func _handle_beacon(text: String, sender_ip: String) -> void:
-	var parts: PackedStringArray = text.split("|")
-	if parts.size() < 3 or parts[0] != DISCOVERY_MAGIC:
-		return
-	var their_id: int = int(parts[1])
-	if their_id == _session_id:
-		return  # our own broadcast looping back, or an astronomically unlikely id collision - ignore either way
-	opponent_name = parts[2]
-	var their_quick_mode: bool = parts.size() >= 4 and parts[3] == "1"
-	_searching = false
-	_beacon_timer.stop()
-	if their_id < _session_id:
-		# Becoming the client - adopt the host's mode choice, discarding our
-		# own pre-connection preference (see quick_mode's doc comment above).
-		quick_mode = their_quick_mode
-		_become_client(sender_ip)
-	else:
-		_become_host()
-
-func _become_host() -> void:
-	is_host = true
-	var peer := ENetMultiplayerPeer.new()
-	var err: int = peer.create_server(GAME_PORT, 1)
-	if err != OK:
-		connection_failed.emit("server_failed")
-		return
-	multiplayer.multiplayer_peer = peer
-	multiplayer.peer_connected.connect(_on_peer_connected)
-	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	_pending_connect = true
-	_connect_timeout_elapsed = 0.0
-
-func _become_client(host_ip: String) -> void:
-	is_host = false
-	var peer := ENetMultiplayerPeer.new()
-	var err: int = peer.create_client(host_ip, GAME_PORT)
-	if err != OK:
-		connection_failed.emit("client_failed")
-		return
-	multiplayer.multiplayer_peer = peer
-	multiplayer.connected_to_server.connect(_on_connected_to_server)
-	multiplayer.connection_failed.connect(_on_connection_failed)
-	multiplayer.server_disconnected.connect(_on_peer_disconnected)
-	_pending_connect = true
-	_connect_timeout_elapsed = 0.0
-
+## Host side: a peer has reached the ENet server, but role_decided/
+## opponent_connected don't fire until the name/mode handshake below
+## finishes (see submit_name()), so both devices always know each other's
+## name and are using the same scoring rules before the match scene loads.
 func _on_peer_connected(_id: int) -> void:
 	_pending_connect = false
-	role_decided.emit(is_host)
-	opponent_connected.emit()
 
 func _on_connected_to_server() -> void:
 	_pending_connect = false
+	submit_name.rpc(_local_name)
+
+@rpc("any_peer", "reliable")
+func submit_name(their_name: String) -> void:
+	if not is_host:
+		return
+	opponent_name = their_name
+	net_room_info.rpc_id(multiplayer.get_remote_sender_id(), _local_name, quick_mode)
+	role_decided.emit(is_host)
+	opponent_connected.emit()
+
+## Client side: the host's reply to submit_name() above - carries the host's
+## name and which scoring rules to use (see quick_mode's doc comment).
+@rpc("authority", "reliable")
+func net_room_info(host_name: String, host_quick_mode: bool) -> void:
+	opponent_name = host_name
+	quick_mode = host_quick_mode
 	role_decided.emit(is_host)
 	opponent_connected.emit()
 
@@ -378,7 +374,8 @@ const NAMED_BOT_KEYS := {
 ## about the opponent - a "_bot"-suffixed event, "bot_serve", or a "bot_
 ## prefix" tally - substitutes the real opponent name in place of the
 ## generic "Bot" wording. Both devices already know their own opponent's
-## name independently from the discovery handshake (see opponent_name), so
+## name independently from the room-connection handshake (see opponent_name),
+## so
 ## no name text ever needs to cross the network here - only the existing
 ## relay's timing cue does, same as before this substitution existed.
 func speak_local_keys(keys: Array) -> void:

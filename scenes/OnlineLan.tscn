@@ -49,12 +49,44 @@ placeholder_text = "Player name"
 accessibility_name = "Player name"
 accessibility_description = "Type the name your opponent will hear during the match."
 
-[node name="SearchButton" type="Button" parent="VBoxContainer"]
+[node name="CreateRoomButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
-custom_minimum_size = Vector2(260, 52)
-text = "Search for a Player"
-accessibility_name = "Search for a Player"
-accessibility_description = "Start searching your local network for another Echo Padel player."
+custom_minimum_size = Vector2(280, 52)
+text = "Create Room"
+accessibility_name = "Create Room"
+accessibility_description = "Host a room. You'll be given a room code to share with the other player."
+
+[node name="JoinRoomButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(280, 52)
+text = "Join Room"
+accessibility_name = "Join Room"
+accessibility_description = "Enter a room code the other player shared with you."
+
+[node name="RoomCodePrompt" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 2
+custom_minimum_size = Vector2(420, 0)
+visible = false
+text = "Enter the room code the other player gave you."
+accessibility_name = "Enter the room code the other player gave you."
+
+[node name="RoomCodeInput" type="LineEdit" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(280, 44)
+visible = false
+placeholder_text = "Room code"
+accessibility_name = "Room code"
+accessibility_description = "Type the room code the host shared with you, then press Connect."
+
+[node name="ConnectButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(280, 52)
+visible = false
+text = "Connect"
+accessibility_name = "Connect"
+accessibility_description = "Connect using the room code you entered."
 
 [node name="StatusLabel" type="Label" parent="VBoxContainer"]
 layout_mode = 2
@@ -62,12 +94,12 @@ horizontal_alignment = 1
 autowrap_mode = 2
 custom_minimum_size = Vector2(420, 0)
 visible = false
-text = "Searching..."
-accessibility_name = "Searching..."
+text = "Waiting..."
+accessibility_name = "Waiting..."
 
 [node name="CancelButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(260, 52)
 text = "Back"
 accessibility_name = "Back"
-accessibility_description = "Stop searching and return to the main menu."
+accessibility_description = "Cancel and return to the main menu."
