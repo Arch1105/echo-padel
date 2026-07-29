@@ -34,11 +34,12 @@ theme_override_font_sizes/font_size = 30
 text = "Play Online (LAN)"
 accessibility_name = "Play online, local network"
 
-[node name="CoinsLabel" type="Label" parent="VBoxContainer"]
+[node name="CoinsButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
-horizontal_alignment = 1
+custom_minimum_size = Vector2(320, 52)
 text = "Coins: 0"
 accessibility_name = "Coins: 0"
+accessibility_description = "Check your current coin balance, earned from online match wins."
 
 [node name="OnlineModeButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2

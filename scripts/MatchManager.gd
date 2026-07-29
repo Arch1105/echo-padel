@@ -262,8 +262,12 @@ func _award_point(winner: String) -> void:
 		NetworkSession.relay_cheer_or_boo(winner == "you")
 	if winner == "you":
 		Sfx3D.rumble(0.5, 0.8, 0.12)
+		if NetworkSession.is_networked and NetworkSession.is_host:
+			NetworkSession.relay_rumble(0.6, 0.15, 0.35)  # the client just lost this point
 	else:
 		Sfx3D.rumble(0.6, 0.15, 0.35)
+		if NetworkSession.is_networked and NetworkSession.is_host:
+			NetworkSession.relay_rumble(0.5, 0.8, 0.12)  # the client just won this point
 	if winner == "you":
 		_speak("point_you")
 	else:

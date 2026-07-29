@@ -200,6 +200,8 @@ const STRINGS := {
 
 	"online_mode_select_title": {"en": "Choose Online Mode", "es": "Elige el modo en línea"},
 	"online_coin_balance": {"en": "Coins: %d", "es": "Monedas: %d"},
+	"online_coin_balance_desc": {"en": "Check your current coin balance, earned from online match wins.",
+			"es": "Consulta tu saldo actual de monedas, ganadas en partidos en línea."},
 	"online_mode_button": {"en": "Online Mode", "es": "Modo en línea"},
 	"online_mode_desc": {"en": "Standard scoring: games and sets, best of three.",
 			"es": "Puntuación estándar: juegos y sets, al mejor de tres."},

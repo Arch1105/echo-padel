@@ -324,14 +324,20 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 		_play_and_relay(sound_name, from, volume_db, 1.0, Sfx3D.NEAR_BUS)
 		if sound_name == "smash":
 			Sfx3D.rumble_smash()
-		elif sound_name == "mishit":
-			Sfx3D.rumble(0.15, 0.1, 0.06)
-		elif sound_name == "drop_shot":
-			Sfx3D.rumble(0.2, 0.15, 0.08)
 		else:
-			Sfx3D.rumble(0.3, 0.9, 0.15)
+			var m: PackedFloat32Array = _hit_rumble_magnitudes(sound_name)
+			Sfx3D.rumble(m[0], m[1], m[2])
 	else:
 		_play_and_relay(sound_name, from, 0.0, 1.0, Sfx3D.DISTANT_BUS)
+		# The host itself doesn't rumble for the opponent's own hit (correct -
+		# that's not the host's action to feel) - but the client needs to feel
+		# THEIR OWN hit on their OWN controller, which only a relay can do.
+		if NetworkSession.is_networked and NetworkSession.is_host:
+			if sound_name == "smash":
+				NetworkSession.relay_rumble_smash()
+			else:
+				var m: PackedFloat32Array = _hit_rumble_magnitudes(sound_name)
+				NetworkSession.relay_rumble(m[0], m[1], m[2])
 	if sound_name == "smash":
 		_spawn_smash_fireworks(from)
 	_launch_flight(from, to, duration, peak_height, target_side_is_player, allow_bank, hitter_side_is_player,
@@ -480,6 +486,19 @@ func _play_and_relay(sound_name: String, pos: Vector3, volume_db: float, pitch: 
 	if NetworkSession.is_networked and NetworkSession.is_host:
 		NetworkSession.relay_sound(sound_name, pos, boosted_db, pitch, bus)
 
+## [weak, strong, duration] rumble magnitudes for a given hit sound_name
+## (smash uses the separate multi-stage rumble_smash() pattern instead - see
+## call sites). Shared by both the host's own local rumble and the relayed
+## copy sent to the client for their own hit, so the two can never drift.
+func _hit_rumble_magnitudes(sound_name: String) -> PackedFloat32Array:
+	match sound_name:
+		"mishit":
+			return PackedFloat32Array([0.15, 0.1, 0.06])
+		"drop_shot":
+			return PackedFloat32Array([0.2, 0.15, 0.08])
+		_:
+			return PackedFloat32Array([0.3, 0.9, 0.15])
+
 ## The client's puppet Ball never runs _handle_bounce()/attempt_hit() itself
 ## (is_puppet skips all of that) - this is the receiving half, called from
 ## NetworkSession's net_visual_effect RPC.
@@ -537,6 +556,8 @@ func _handle_bounce() -> void:
 		_play_and_relay("bounce_locate", global_position, volume_db, pitch, bus)
 		if landed_side_is_player:
 			Sfx3D.rumble(0.15, 0.3, 0.08)
+		elif NetworkSession.is_networked and NetworkSession.is_host:
+			NetworkSession.relay_rumble(0.15, 0.3, 0.08)
 		var cont_height: float
 		if hop_is_dolly:
 			cont_height = DOLLY_SECOND_BOUNCE_HEIGHT
@@ -569,6 +590,8 @@ func _handle_bounce() -> void:
 		_play_and_relay("bounce_second", global_position, volume_db, pitch, bus)
 		if landed_side_is_player:
 			Sfx3D.rumble(0.25, 0.5, 0.1)
+		elif NetworkSession.is_networked and NetworkSession.is_host:
+			NetworkSession.relay_rumble(0.25, 0.5, 0.1)
 		_grace_elapsed = 0.0
 		_hop_state = HopState.FROZEN_AWAITING_HIT
 		# hit_window_open should already be true by now (opened pre-emptively

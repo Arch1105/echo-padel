@@ -30,6 +30,13 @@ const GAME_PORT := 58272
 const DISCOVERY_BEACON_INTERVAL := 0.75
 const DISCOVERY_MAGIC := "ECHOPADEL_LAN_V1"
 const CONNECT_TIMEOUT := 8.0
+## Unlike the connect phase (CONNECT_TIMEOUT above), pure discovery -
+## broadcasting and listening for a beacon, before either device is even
+## found - previously had no timeout at all, so if beacons genuinely weren't
+## reaching each other it just said "still searching" forever with no clear
+## failure. This gives it an explicit failure after a generous wait, so a
+## real problem at least surfaces instead of hanging silently.
+const DISCOVERY_TIMEOUT := 45.0
 
 var is_networked: bool = false
 var is_host: bool = false
@@ -47,6 +54,7 @@ var _beacon_timer: Timer
 var _session_id: int = 0
 var _local_name: String = ""
 var _searching: bool = false
+var _search_elapsed: float = 0.0
 var _pending_connect: bool = false
 var _connect_timeout_elapsed: float = 0.0
 
@@ -88,6 +96,7 @@ func _reset_state() -> void:
 	is_networked = false
 	is_host = false
 	_searching = false
+	_search_elapsed = 0.0
 	_pending_connect = false
 	remote_ready_received = false
 	if _beacon_timer:
@@ -113,6 +122,14 @@ func _send_beacon() -> void:
 
 func _process(delta: float) -> void:
 	if _searching and _discovery_socket:
+		_search_elapsed += delta
+		if _search_elapsed > DISCOVERY_TIMEOUT:
+			_searching = false
+			_search_elapsed = 0.0
+			if _beacon_timer:
+				_beacon_timer.stop()
+			connection_failed.emit("discovery_timeout")
+			return
 		while _discovery_socket.get_available_packet_count() > 0:
 			var packet: PackedByteArray = _discovery_socket.get_packet()
 			var sender_ip: String = _discovery_socket.get_packet_ip()
@@ -308,7 +325,11 @@ func relay_visual_effect(effect_name: String, pos: Vector3) -> void:
 		var mirrored_pos: Vector3 = Vector3(pos.x, pos.y, -pos.z)
 		net_visual_effect.rpc(effect_name, mirrored_pos)
 
-## --- Rumble relay: host -> client (their own controller, if any) ---
+## --- Rumble relay: host -> client (their own controller, if any). The host
+## already rumbles locally for its own "you" actions (see Ball.gd/
+## MatchManager.gd) - these two relay a "bot"-side (i.e. the client's own)
+## rumble-worthy event to the client, so their own controller vibrates too,
+## same as it already hears/sees those events relayed. ---
 
 @rpc("authority", "reliable")
 func net_rumble(weak_magnitude: float, strong_magnitude: float, duration: float) -> void:
@@ -317,6 +338,14 @@ func net_rumble(weak_magnitude: float, strong_magnitude: float, duration: float)
 func relay_rumble(weak_magnitude: float, strong_magnitude: float, duration: float) -> void:
 	if is_networked and is_host:
 		net_rumble.rpc(weak_magnitude, strong_magnitude, duration)
+
+@rpc("authority", "reliable")
+func net_rumble_smash() -> void:
+	Sfx3D.rumble_smash()
+
+func relay_rumble_smash() -> void:
+	if is_networked and is_host:
+		net_rumble_smash.rpc()
 
 ## --- Voice/announcement relay: host -> client, with you/bot perspective flip ---
 
