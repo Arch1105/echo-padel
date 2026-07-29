@@ -108,8 +108,18 @@ func _await_ready_then_serve() -> void:
 ## mirror of _await_ready_then_serve() above, for the player who isn't
 ## serving this point (or is, from their own perspective - either way, both
 ## players see this every point).
+##
+## Also where the client's own paddle resets to the front-middle tile for
+## the new point - the host's _serve() only resets the host's own two local
+## nodes (its own Player, and its own Bot copy of the client, which then
+## gets relayed to update the client's *puppet* view of the host); nothing
+## ever told the client's own local Player node to reset, so a client who'd
+## moved before the point ended stayed on that tile - this call is what was
+## missing.
 func client_show_ready_prompt() -> void:
 	_client_awaiting_ready = true
+	player.cancel_charge()
+	player.reset_position()
 	Sfx3D.play_ui("ready_chime")
 	Voice.say("ready_prompt")
 
