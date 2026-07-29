@@ -84,6 +84,12 @@ LINES = {
 	"serves_suffix": "serves.",
 	"wins_match_suffix": "wins the match.",
 	"ready_prompt": "Press Enter when ready to serve.",
+	"coord_prefix": "Your position:",
+	"coord_left": "left,",
+	"coord_middle": "middle,",
+	"coord_right": "right,",
+	"coord_front": "front.",
+	"coord_back": "back.",
 }
 
 for _i in range(21):

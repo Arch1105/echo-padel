@@ -79,6 +79,12 @@ LINES = {
 	"serves_suffix": "saca.",
 	"wins_match_suffix": "gana el partido.",
 	"ready_prompt": "Pulsa Enter cuando estés listo para sacar.",
+	"coord_prefix": "Tu posición:",
+	"coord_left": "izquierda,",
+	"coord_middle": "centro,",
+	"coord_right": "derecha,",
+	"coord_front": "adelante.",
+	"coord_back": "atrás.",
 }
 
 # Career-mode opponent surnames (see OpponentNames.gd's LAST_NAMES - this

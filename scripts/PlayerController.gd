@@ -115,9 +115,31 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("check_score") and match_manager:
 		match_manager.announce_score()
 
+	if Input.is_action_just_pressed("check_coordinates"):
+		_announce_coordinates()
+
 func cancel_charge() -> void:
 	_charging = false
 	_drop_charging = false
+
+## Speaks your own current tile as a left/middle/right, front/back pair -
+## purely local (this device's own PlayerController already knows its own
+## current_col/current_row_local directly, host or client, LAN or offline),
+## so it works identically in every mode without any network relay. Returns
+## the key list spoken, so tests can check the mapping without depending on
+## Voice's own playback state.
+func _announce_coordinates() -> Array[String]:
+	var col_key: String
+	if current_col == 0:
+		col_key = "coord_left"
+	elif current_col == Court.COLS - 1:
+		col_key = "coord_right"
+	else:
+		col_key = "coord_middle"
+	var row_key: String = "coord_front" if current_row_local == 0 else "coord_back"
+	var keys: Array[String] = ["coord_prefix", col_key, row_key]
+	Voice.say_sequence(keys)
+	return keys
 
 ## In a LAN match (see NetworkSession.gd), applies locally right away for
 ## responsiveness (move() always succeeds within the grid, so there's no
