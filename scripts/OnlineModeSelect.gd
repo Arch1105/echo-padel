@@ -9,13 +9,16 @@ extends Control
 @onready var title_label: Label = $VBoxContainer/Title
 @onready var online_button: Button = $VBoxContainer/OnlineModeButton
 @onready var quick_button: Button = $VBoxContainer/QuickModeButton
+@onready var store_button: Button = $VBoxContainer/StoreButton
 @onready var back_button: Button = $VBoxContainer/BackButton
 
 func _ready() -> void:
 	get_tree().paused = false
+	Music.play_online_music()
 	_apply_text()
 	online_button.pressed.connect(_on_online_pressed)
 	quick_button.pressed.connect(_on_quick_pressed)
+	store_button.pressed.connect(_on_store_pressed)
 	back_button.pressed.connect(_on_back_pressed)
 	online_button.grab_focus()
 
@@ -35,8 +38,15 @@ func _apply_text() -> void:
 	quick_button.accessibility_name = Loc.t("quick_online_mode_button")
 	quick_button.accessibility_description = Loc.t("quick_online_mode_desc")
 
+	store_button.text = Loc.t("store_button")
+	store_button.accessibility_name = Loc.t("store_button")
+	store_button.accessibility_description = Loc.t("store_desc")
+
 	back_button.text = Loc.t("back_button")
 	back_button.accessibility_name = Loc.t("back_button")
+
+func _on_store_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/EmoteStore.tscn")
 
 func _on_online_pressed() -> void:
 	NetworkSession.quick_mode = false

@@ -68,6 +68,9 @@ const SOUNDS := {
 	"cheer": preload("res://audio/sfx/cheer.wav"),
 	"boo": preload("res://audio/sfx/boo.wav"),
 	"ready_chime": preload("res://audio/sfx/ready_chime.wav"),
+	"afro_pop": preload("res://audio/emotes/afro_pop.wav"),
+	"hip_hop": preload("res://audio/emotes/hip_hop.wav"),
+	"eastern_folk_dance": preload("res://audio/emotes/eastern_folk_dance.wav"),
 }
 
 ## Sounds happening on your own side play on this bus (full range, no cut).

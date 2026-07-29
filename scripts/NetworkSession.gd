@@ -390,17 +390,40 @@ static func flip_you_bot_key(key: String) -> String:
 
 ## --- Match lifecycle relay: host -> client ---
 
+## host_won: from the HOST's own "you"/"bot" perspective - so on the client
+## receiving this, host_won == true means *I* (the client) lost, and
+## host_won == false means I won (see OnlineData.gd's LAN-only coin award,
+## mirrored here for whichever device the host's MatchManager didn't already
+## award it to directly in _win_match()).
 @rpc("authority", "reliable")
-func net_match_over() -> void:
+func net_match_over(host_won: bool) -> void:
+	if not host_won:
+		OnlineData.add_coins(OnlineData.COINS_PER_WIN)
 	get_tree().create_timer(4.0).timeout.connect(func() -> void:
 		if is_networked:
 			end_session()
 		get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
 	)
 
-func relay_match_over() -> void:
+## --- Emote relay: either side -> the other (see EmoteMenu.gd) - unlike the
+## rest of this file, this isn't host-authoritative, since either player can
+## trigger their own celebration regardless of host/client role. ---
+
+## Call this locally when the player picks an emote - plays it right away on
+## this device and tells the opponent's device to play it too.
+func play_emote(emote_id: String) -> void:
+	Sfx3D.play_ui(emote_id)
+	if is_networked:
+		net_play_emote.rpc(emote_id)
+
+@rpc("any_peer", "reliable")
+func net_play_emote(emote_id: String) -> void:
+	Sfx3D.play_ui(emote_id)
+	Voice.say_dynamic("%s %s" % [opponent_name, Loc.t("emote_celebrates_suffix")])
+
+func relay_match_over(host_won: bool) -> void:
 	if is_networked and is_host:
-		net_match_over.rpc()
+		net_match_over.rpc(host_won)
 
 func _find_local_ball() -> Ball:
 	var scene: Node = get_tree().current_scene

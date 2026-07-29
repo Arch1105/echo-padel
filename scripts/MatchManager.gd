@@ -394,8 +394,15 @@ func _win_match(winner: String) -> void:
 		_handle_career_result(winner)
 		return
 	_speak("you_win_match" if winner == "you" else "bot_wins_match")
-	if NetworkSession.is_networked and NetworkSession.is_host:
-		NetworkSession.relay_match_over()
+	if NetworkSession.is_networked:
+		# Coins are LAN-only (see OnlineData.gd) - only the winner's own
+		# device awards them, and only once, right here on the host's
+		# authoritative copy of the result; the client's own award happens
+		# symmetrically in NetworkSession.net_match_over().
+		if winner == "you":
+			OnlineData.add_coins(OnlineData.COINS_PER_WIN)
+		if NetworkSession.is_host:
+			NetworkSession.relay_match_over(winner == "you")
 	await get_tree().create_timer(4.0).timeout
 	if NetworkSession.is_networked:
 		NetworkSession.end_session()

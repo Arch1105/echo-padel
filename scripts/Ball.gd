@@ -132,13 +132,46 @@ const BALL_DOLLY_COLOR := Color(1.0, 0.55, 0.05)
 const FIREWORKS_LIFETIME := 1.2
 const BOUNCE_FLASH_LIFETIME := 0.5
 
+## A flat, dark "contact shadow" tracking the ball's XZ position at all
+## times, sized and faded by height (see _update_shadow()) - a real tennis
+## broadcast trick for reading how high/far a ball is off a 2D-ish camera
+## angle without needing full HRTF-quality depth cues, purely a sighted-
+## player aid (per feedback asking for the ball to be easier to judge).
+const SHADOW_MAX_HEIGHT := 1.8
+const SHADOW_MIN_SCALE := 0.3
+const SHADOW_MAX_ALPHA := 0.45
+const SHADOW_MIN_ALPHA := 0.12
+
 @onready var _mesh: MeshInstance3D = $MeshInstance3D
+@onready var _shadow: MeshInstance3D = $Shadow
 var _ball_mat: StandardMaterial3D
+var _shadow_mat: StandardMaterial3D
 
 func _ready() -> void:
 	_ball_mat = StandardMaterial3D.new()
 	_ball_mat.albedo_color = BALL_NORMAL_COLOR
+	# A real tennis ball is felted, not glossy - roughness near 1 keeps
+	# specular highlights soft/diffuse instead of a shiny plastic look.
+	_ball_mat.roughness = 0.92
+	_ball_mat.metallic = 0.0
 	_mesh.material_override = _ball_mat
+
+	_shadow_mat = StandardMaterial3D.new()
+	_shadow_mat.albedo_color = Color(0.0, 0.0, 0.0, SHADOW_MAX_ALPHA)
+	_shadow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_shadow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_shadow.material_override = _shadow_mat
+
+## Keeps the ground shadow blob under the ball's current XZ position at all
+## times, shrinking and fading it the higher the ball currently is - runs
+## for both the host's real ball and the client's puppet copy, since both
+## have a valid, up-to-date global_position to read from.
+func _update_shadow() -> void:
+	var height_frac: float = clampf(global_position.y / SHADOW_MAX_HEIGHT, 0.0, 1.0)
+	var scale_amount: float = lerp(1.0, SHADOW_MIN_SCALE, height_frac)
+	_shadow.scale = Vector3(scale_amount, 1.0, scale_amount)
+	_shadow.global_position = Vector3(global_position.x, 0.01, global_position.z)
+	_shadow_mat.albedo_color.a = lerp(SHADOW_MAX_ALPHA, SHADOW_MIN_ALPHA, height_frac)
 
 func _opponent_of(side: String) -> String:
 	return "bot" if side == "you" else "you"
@@ -392,6 +425,7 @@ func _launch_flight(from: Vector3, to: Vector3, duration: float, peak_height: fl
 func _physics_process(delta: float) -> void:
 	if _ball_mat:
 		_ball_mat.albedo_color = BALL_DOLLY_COLOR if hop_is_dolly else BALL_NORMAL_COLOR
+	_update_shadow()
 	if is_puppet:
 		return
 	match _hop_state:

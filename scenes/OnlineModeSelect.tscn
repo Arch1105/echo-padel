@@ -48,6 +48,13 @@ text = "Quick Online Mode"
 accessibility_name = "Quick Online Mode"
 accessibility_description = "Fast scoring: first to seven points, win by two, no games or sets."
 
+[node name="StoreButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(320, 52)
+text = "Emote Store"
+accessibility_name = "Emote Store"
+accessibility_description = "Spend coins earned from online wins on celebration emotes."
+
 [node name="BackButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(260, 52)

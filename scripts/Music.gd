@@ -1,10 +1,11 @@
 extends Node
 ## Looping background music - only ever plays on the main menu, the Career
 ## menu screens (Hub/name-entry/Upgrades - a separate, more ominous track),
-## or while gameplay is paused (see PauseHandler.gd), never during active
-## play. See tools/generate_menu_music.py and tools/generate_career_music.py
-## for each track's source/license/loop-prep details - both original CC0
-## compositions, not covers of any commercial song.
+## the Online Mode Select screen (a catchy, upbeat pop track), or while
+## gameplay is paused (see PauseHandler.gd), never during active play. See
+## tools/generate_menu_music.py, tools/generate_career_music.py, and
+## tools/generate_online_music.py for each track's source/license/loop-prep
+## details - all original CC0 compositions, not covers of any commercial song.
 ##
 ## process_mode is ALWAYS so playback keeps working (and can be started)
 ## while get_tree().paused is true - by default a node stops processing
@@ -13,6 +14,7 @@ extends Node
 
 const MENU_TRACK: AudioStreamMP3 = preload("res://audio/music/menu_theme.mp3")
 const CAREER_TRACK: AudioStreamMP3 = preload("res://audio/music/career_theme.mp3")
+const ONLINE_TRACK: AudioStreamMP3 = preload("res://audio/music/online_theme.mp3")
 const VOLUME_DB := -10.0
 
 var _player: AudioStreamPlayer
@@ -34,6 +36,11 @@ func play_music() -> void:
 ## ominous track so Career mode has its own distinct identity.
 func play_career_music() -> void:
 	_play_track(CAREER_TRACK)
+
+## OnlineModeSelect.tscn uses this - a separate, catchier/more upbeat track
+## so choosing an online match mode has its own energetic identity.
+func play_online_music() -> void:
+	_play_track(ONLINE_TRACK)
 
 func _play_track(track: AudioStreamMP3) -> void:
 	if _current_track == track and _player.playing:

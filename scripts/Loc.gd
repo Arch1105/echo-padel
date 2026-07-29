@@ -165,6 +165,10 @@ const STRINGS := {
 	"help_career_body": {"en": "Start a career, name your player, and climb from School League all the way to the Grand Slams and beyond, to the Hall of Champions. Each tournament is a multi-round bracket - lose a round and you're out of that tournament, though you keep your tier. Three tournament losses at the same tier demotes you one tier down (School League has unlimited tries). Win a love game - a game where your opponent doesn't score a single point - and you earn an upgrade point, spendable from the Career Hub's Upgrades screen on your character's Strength (harder normal shots), IQ (shaped shots placed further from center), Speed (faster movement between tiles), and Racket (a more forgiving hit timing window).",
 			"es": "Inicia una carrera, ponle nombre a tu jugador, y sube desde la Liga Escolar hasta los Grand Slams y más allá, hasta el Salón de Campeones. Cada torneo es un cuadro de varias rondas - pierde una ronda y quedas fuera de ese torneo, aunque conservas tu nivel. Tres derrotas en torneos del mismo nivel te bajan un nivel (la Liga Escolar tiene intentos ilimitados). Gana un juego a cero - un juego en el que tu rival no anota ni un punto - y ganas un punto de mejora, que puedes gastar desde la pantalla de Mejoras del Centro de Carrera en la Fuerza de tu personaje (golpes normales más fuertes), Inteligencia (golpes con efecto colocados más lejos del centro), Velocidad (te mueves más rápido entre casillas) y Raqueta (una ventana de tiempo más generosa al golpear)."},
 
+	"help_online_extras_heading": {"en": "Online Coins & Emotes", "es": "Monedas y emotes en línea"},
+	"help_online_extras_body": {"en": "Winning an online match, in either Online Mode or Quick Online Mode, earns you 5 coins. Spend coins in the Emote Store (from the online menu) on celebration emotes - short music clips. During an online match, hold Left Shift (or a controller's left bumper) to open your emote menu, use Down to pick one you own, and press Enter to play it - your opponent hears it too, and so do you.",
+			"es": "Ganar un partido en línea, ya sea en Modo en línea o Modo rápido en línea, te da 5 monedas. Gástalas en la Tienda de emotes (desde el menú en línea) en emotes de celebración - clips musicales cortos. Durante un partido en línea, mantén pulsada la tecla Shift izquierda (o el gatillo izquierdo de un mando) para abrir tu menú de emotes, usa Abajo para elegir uno que tengas, y pulsa Enter para reproducirlo - tu rival también lo escuchará, y tú también."},
+
 	"help_settings_heading": {"en": "Settings", "es": "Configuración"},
 	"help_settings_body": {"en": "Adjust the master volume and switch between English and Spanish menus and voice from the Settings screen, reachable from the main menu.",
 			"es": "Ajusta el volumen general y cambia entre menús y voz en inglés o español desde la pantalla de Configuración, accesible desde el menú principal."},
@@ -198,6 +202,31 @@ const STRINGS := {
 	"quick_online_mode_button": {"en": "Quick Online Mode", "es": "Modo rápido en línea"},
 	"quick_online_mode_desc": {"en": "Fast scoring: first to seven points, win by two, no games or sets.",
 			"es": "Puntuación rápida: el primero en llegar a siete puntos, con dos de ventaja, sin juegos ni sets."},
+
+	"store_button": {"en": "Emote Store", "es": "Tienda de emotes"},
+	"store_desc": {"en": "Spend coins earned from online wins on celebration emotes.",
+			"es": "Gasta las monedas ganadas en línea en emotes de celebración."},
+	"store_title": {"en": "Emote Store", "es": "Tienda de emotes"},
+	"store_coin_balance": {"en": "You have %d coins.", "es": "Tienes %d monedas."},
+	"store_owned_label": {"en": "Owned", "es": "Ya lo tienes"},
+	"store_buy_button": {"en": "Buy for %d coins", "es": "Comprar por %d monedas"},
+	"store_buy_desc": {"en": "Spend %d coins to unlock this emote.", "es": "Gasta %d monedas para desbloquear este emote."},
+	"store_bought_message": {"en": "Bought! You can now play this emote during online matches.",
+			"es": "¡Comprado! Ya puedes reproducir este emote en partidos en línea."},
+	"store_cant_afford_message": {"en": "Not enough coins yet.", "es": "Todavía no tienes suficientes monedas."},
+	"store_earn_hint": {"en": "Win an online match, either mode, to earn 5 coins.",
+			"es": "Gana un partido en línea, en cualquier modo, para ganar 5 monedas."},
+
+	"emote_afro_pop": {"en": "Afro Pop", "es": "Afro pop"},
+	"emote_hip_hop": {"en": "Hip-Hop", "es": "Hip-hop"},
+	"emote_eastern_folk_dance": {"en": "Eastern European Folk Dance", "es": "Danza folclórica de Europa del Este"},
+
+	"emote_menu_title": {"en": "Emotes", "es": "Emotes"},
+	"emote_menu_empty": {"en": "You don't own any emotes yet - visit the Emote Store from the main menu.",
+			"es": "Todavía no tienes emotes - visita la Tienda de emotes desde el menú principal."},
+	"emote_menu_play_desc": {"en": "Play this emote now - your opponent will hear it too.",
+			"es": "Reproduce este emote ahora - tu rival también lo escuchará."},
+	"emote_celebrates_suffix": {"en": "celebrates!", "es": "¡celebra!"},
 }
 
 const TIER_NAMES_ES := [
