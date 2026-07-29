@@ -200,9 +200,10 @@ func start_serve(server_side_is_player: bool, server_col: int, server_row_local:
 
 ## by: "you"/"bot". shape: {power: 0..1, curve: -1/0/1, depth: -1/0/1,
 ## is_smash: bool, is_drop_shot: bool} (curve: -1 left, 1 right - depth: -1
-## back/deep bank, 1 forward/short, 0 flat - is_drop_shot forces depth to 1
-## regardless of what was passed, see PlayerController.gd's dedicated drop
-## shot button). hitter_col/hitter_row_local: the hitter's own current tile
+## back/deep bank, 1 forward/short, 0 flat - either is_drop_shot=true or
+## depth=1 alone is enough to be treated as a drop shot, see
+## PlayerController.gd's dedicated drop shot button vs. its older Forward-
+## shape technique). hitter_col/hitter_row_local: the hitter's own current tile
 ## (shot origin).
 func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dictionary) -> bool:
 	if is_puppet:
@@ -226,10 +227,19 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 	hit_window_open = false
 	_hop_state = HopState.NONE
 
-	var is_drop_shot: bool = shape.get("is_drop_shot", false)
 	var power: float = clampf(shape.get("power", 0.5), 0.0, 1.0)
 	var curve: int = clampi(shape.get("curve", 0), -1, 1)
-	var depth: int = 1 if is_drop_shot else clampi(shape.get("depth", 0), -1, 1)
+	var depth: int = clampi(shape.get("depth", 0), -1, 1)
+	# Any shot landing short (depth > 0) reads as a drop shot, whether it came
+	# from the dedicated drop-shot button (which always sets depth to 1
+	# itself) or from holding Forward while releasing a normal swing - the
+	# older, easier-to-miss way to shape a short shot (see PlayerController.
+	# gd's class doc comment; the bot uses this path too, via BotAI._swing()'s
+	# random depth choice). Both land in the same tile, so both should sound
+	# and risk the same way - previously only the dedicated button did.
+	var is_drop_shot: bool = shape.get("is_drop_shot", false) or depth > 0
+	if is_drop_shot:
+		depth = 1
 	var from: Vector3 = Court.cell_center(hitter_side_is_player, hitter_col, hitter_row_local) + Vector3(0, 0.9, 0)
 	var target_side_is_player: bool = not hitter_side_is_player
 
