@@ -1,14 +1,19 @@
 extends Node
 ## LAN-only coin/emote economy - a completely separate save from CareerData
 ## (see user://online_save.json vs user://career_save.json), since it's tied
-## to LAN match wins, not career progress, and applies equally to Online and
-## Quick Online Mode. Winning a networked match awards COINS_PER_WIN coins
-## (see MatchManager.gd's _win_match(), NetworkSession.gd's net_match_over())
-## - coins are spent in EmoteStore.tscn on emotes, played back during a match
-## via EmoteMenu.gd/NetworkSession.play_emote().
+## to LAN match wins, not career progress. Winning a networked match awards
+## coins (see MatchManager.gd's _win_match(), NetworkSession.gd's
+## net_match_over(), both of which pick COINS_PER_WIN or COINS_PER_QUICK_WIN
+## based on quick_mode) - coins are spent in EmoteStore.tscn on emotes,
+## played back during a match via EmoteMenu.gd/NetworkSession.play_emote().
 
 const SAVE_PATH := "user://online_save.json"
 const COINS_PER_WIN := 5
+## Quick Online Mode is a much faster win (a single race to 7, no games/
+## sets), so it pays out less per feedback, to keep the two modes' coin
+## rates roughly comparable per minute rather than Quick Mode being a
+## strictly faster way to the same reward.
+const COINS_PER_QUICK_WIN := 2
 
 var coins: int = 0
 var owned_emotes: Array[String] = []

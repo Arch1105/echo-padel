@@ -404,7 +404,8 @@ func _win_match(winner: String) -> void:
 		# authoritative copy of the result; the client's own award happens
 		# symmetrically in NetworkSession.net_match_over().
 		if winner == "you":
-			OnlineData.add_coins(OnlineData.COINS_PER_WIN)
+			var coins: int = OnlineData.COINS_PER_QUICK_WIN if quick_mode else OnlineData.COINS_PER_WIN
+			OnlineData.add_coins(coins)
 		if NetworkSession.is_host:
 			NetworkSession.relay_match_over(winner == "you")
 	await get_tree().create_timer(4.0).timeout

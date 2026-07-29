@@ -4,6 +4,15 @@ extends Control
 ## pattern CareerHub.gd uses for its tier list, since the list itself isn't
 ## a small fixed set of named slots the way CareerUpgrades.gd's four stats
 ## are.
+##
+## Tab (or a controller's left trigger) previews the focused emote's sound
+## without buying it - Up/Down (native Button focus, unaffected) already
+## cover navigating this vertical list, so Tab is free to repurpose here.
+## Handled in _input() rather than _unhandled_input() specifically so it's
+## seen *before* Godot's own UI layer consumes Tab for its default focus-
+## next behavior - set_input_as_handled() then stops that default from also
+## firing, so Tab means only "preview" on this screen, not "preview and also
+## move focus".
 
 @onready var title_label: Label = $VBoxContainer/Title
 @onready var coins_label: Label = $VBoxContainer/CoinsLabel
@@ -23,6 +32,15 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		_on_back_pressed()
+
+func _input(event: InputEvent) -> void:
+	if not event.is_action_pressed("preview_emote"):
+		return
+	var focused: Control = get_viewport().gui_get_focus_owner()
+	if focused == null or not focused.has_meta("emote_id"):
+		return
+	Sfx3D.play_ui(focused.get_meta("emote_id"))
+	get_viewport().set_input_as_handled()
 
 func _refresh() -> void:
 	title_label.text = Loc.t("store_title")
@@ -45,9 +63,11 @@ func _refresh() -> void:
 		var btn := Button.new()
 		btn.custom_minimum_size = Vector2(360, 52)
 		btn.focus_mode = Control.FOCUS_ALL
+		btn.set_meta("emote_id", emote_id)
 		if OnlineData.owns_emote(emote_id):
 			btn.text = "%s - %s" % [emote_name, Loc.t("store_owned_label")]
 			btn.accessibility_name = btn.text
+			btn.accessibility_description = Loc.t("store_owned_desc")
 			btn.disabled = true
 		else:
 			btn.text = "%s - %s" % [emote_name, Loc.t("store_buy_button") % price]

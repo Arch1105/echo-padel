@@ -427,7 +427,8 @@ static func flip_you_bot_key(key: String) -> String:
 @rpc("authority", "reliable")
 func net_match_over(host_won: bool) -> void:
 	if not host_won:
-		OnlineData.add_coins(OnlineData.COINS_PER_WIN)
+		var coins: int = OnlineData.COINS_PER_QUICK_WIN if quick_mode else OnlineData.COINS_PER_WIN
+		OnlineData.add_coins(coins)
 	get_tree().create_timer(4.0).timeout.connect(func() -> void:
 		if is_networked:
 			end_session()
