@@ -77,6 +77,13 @@ const SOUNDS := {
 	"chiptune_victory": preload("res://audio/emotes/chiptune_victory.wav"),
 	"airhorn_hype": preload("res://audio/emotes/airhorn_hype.wav"),
 	"latin_party": preload("res://audio/emotes/latin_party.wav"),
+	"champions_taunt": preload("res://audio/emotes/champions_taunt.wav"),
+	"why_so_serious": preload("res://audio/emotes/why_so_serious.wav"),
+	"ping_pong_taunt": preload("res://audio/emotes/ping_pong_taunt.wav"),
+	"mic_drop": preload("res://audio/emotes/mic_drop.wav"),
+	"too_easy_tease": preload("res://audio/emotes/too_easy_tease.wav"),
+	"game_over_trailer": preload("res://audio/emotes/game_over_trailer.wav"),
+	"sad_trombone": preload("res://audio/emotes/sad_trombone.wav"),
 }
 
 ## Sounds happening on your own side play on this bus (full range, no cut).

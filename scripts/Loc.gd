@@ -258,6 +258,13 @@ const STRINGS := {
 	"emote_chiptune_victory": {"en": "Chiptune Victory", "es": "Victoria chiptune"},
 	"emote_airhorn_hype": {"en": "Airhorn Hype", "es": "Bocina de estadio"},
 	"emote_latin_party": {"en": "Latin Party", "es": "Fiesta latina"},
+	"emote_sad_trombone": {"en": "Sad Trombone", "es": "Trombón triste"},
+	"emote_mic_drop": {"en": "Mic Drop", "es": "Suelta el micrófono"},
+	"emote_why_so_serious": {"en": "Why So Serious?", "es": "¿Por qué tan serio?"},
+	"emote_ping_pong_taunt": {"en": "Ping Pong Taunt", "es": "Burla del ping pong"},
+	"emote_game_over_trailer": {"en": "Game Over Trailer", "es": "Tráiler de fin de partida"},
+	"emote_too_easy_tease": {"en": "Too Easy", "es": "Demasiado fácil"},
+	"emote_champions_taunt": {"en": "Champions Taunt", "es": "Burla de campeones"},
 
 	"emote_menu_title": {"en": "Emotes", "es": "Emotes"},
 	"emote_menu_empty": {"en": "You don't own any emotes yet - visit the Emote Store from the main menu.",

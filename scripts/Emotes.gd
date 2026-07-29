@@ -15,6 +15,13 @@ const CATALOG := [
 	{"id": "chiptune_victory", "name_key": "emote_chiptune_victory", "price": 15},
 	{"id": "airhorn_hype", "name_key": "emote_airhorn_hype", "price": 15},
 	{"id": "latin_party", "name_key": "emote_latin_party", "price": 15},
+	{"id": "sad_trombone", "name_key": "emote_sad_trombone", "price": 2},
+	{"id": "mic_drop", "name_key": "emote_mic_drop", "price": 3},
+	{"id": "why_so_serious", "name_key": "emote_why_so_serious", "price": 4},
+	{"id": "ping_pong_taunt", "name_key": "emote_ping_pong_taunt", "price": 5},
+	{"id": "game_over_trailer", "name_key": "emote_game_over_trailer", "price": 7},
+	{"id": "too_easy_tease", "name_key": "emote_too_easy_tease", "price": 8},
+	{"id": "champions_taunt", "name_key": "emote_champions_taunt", "price": 10},
 ]
 
 static func find(emote_id: String) -> Dictionary:
