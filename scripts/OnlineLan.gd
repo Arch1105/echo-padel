@@ -19,6 +19,7 @@ extends Control
 @onready var room_code_input: LineEdit = $VBoxContainer/RoomCodeInput
 @onready var connect_button: Button = $VBoxContainer/ConnectButton
 @onready var status_label: Label = $VBoxContainer/StatusLabel
+@onready var copy_code_button: Button = $VBoxContainer/CopyCodeButton
 @onready var cancel_button: Button = $VBoxContainer/CancelButton
 
 const REASSURANCE_INTERVAL := 20.0
@@ -27,6 +28,7 @@ var _connecting: bool = false
 var _joining: bool = false
 var _waiting_for_opponent: bool = false
 var _reassurance_timer: Timer
+var _hosted_room_code: String = ""
 
 func _ready() -> void:
 	get_tree().paused = false
@@ -37,6 +39,7 @@ func _ready() -> void:
 	join_button.pressed.connect(_on_join_pressed)
 	connect_button.pressed.connect(_on_connect_pressed)
 	room_code_input.text_submitted.connect(func(_t: String) -> void: _on_connect_pressed())
+	copy_code_button.pressed.connect(_on_copy_code_pressed)
 	cancel_button.pressed.connect(_on_cancel_pressed)
 	NetworkSession.opponent_connected.connect(_on_opponent_connected)
 	NetworkSession.connection_failed.connect(_on_connection_failed)
@@ -78,6 +81,9 @@ func _apply_text() -> void:
 	connect_button.text = Loc.t("lan_connect_button")
 	connect_button.accessibility_name = Loc.t("lan_connect_button")
 	connect_button.accessibility_description = Loc.t("lan_connect_desc")
+	copy_code_button.text = Loc.t("lan_copy_code_button")
+	copy_code_button.accessibility_name = Loc.t("lan_copy_code_button")
+	copy_code_button.accessibility_description = Loc.t("lan_copy_code_desc")
 	cancel_button.text = Loc.t("back_button")
 	cancel_button.accessibility_name = Loc.t("back_button")
 	cancel_button.accessibility_description = Loc.t("lan_cancel_desc")
@@ -110,11 +116,14 @@ func _on_create_pressed() -> void:
 	var player_name: String = _lock_in_name()
 	var code: String = NetworkSession.local_room_code()
 	_hide_choice_step()
-	cancel_button.grab_focus()
 	if code == "":
+		cancel_button.grab_focus()
 		_set_status(Loc.t("lan_no_address_message"))
 		Voice.say_dynamic(Loc.t("lan_no_address_message"))
 		return
+	_hosted_room_code = code
+	copy_code_button.visible = true
+	copy_code_button.grab_focus()
 	var key: String = "lan_hosting_quick_message" if NetworkSession.quick_mode else "lan_hosting_message"
 	var message: String = Loc.t(key) % code
 	_set_status(message)
@@ -122,6 +131,10 @@ func _on_create_pressed() -> void:
 	NetworkSession.create_room(player_name)
 	_waiting_for_opponent = true
 	_reassurance_timer.start()
+
+func _on_copy_code_pressed() -> void:
+	DisplayServer.clipboard_set(_hosted_room_code)
+	Voice.say_dynamic(Loc.t("lan_copy_code_confirm") % _hosted_room_code)
 
 func _on_join_pressed() -> void:
 	if _connecting:
@@ -166,8 +179,11 @@ func _on_opponent_connected() -> void:
 func _on_connection_failed(reason: String) -> void:
 	_waiting_for_opponent = false
 	_reassurance_timer.stop()
+	copy_code_button.visible = false
 	var message: String
-	if reason == "server_failed" or reason == "client_failed":
+	if reason == "invalid_code":
+		message = Loc.t("lan_invalid_code_message")
+	elif reason == "server_failed" or reason == "client_failed":
 		message = Loc.t("lan_failed_message")
 	elif _joining:
 		message = Loc.t("lan_failed_join_message")
@@ -175,6 +191,7 @@ func _on_connection_failed(reason: String) -> void:
 		message = Loc.t("lan_failed_host_message")
 	_set_status(message)
 	Voice.say_dynamic(message)
+	cancel_button.grab_focus()
 
 func _on_cancel_pressed() -> void:
 	NetworkSession.cancel_search()

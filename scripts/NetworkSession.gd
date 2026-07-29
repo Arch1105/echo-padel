@@ -16,7 +16,8 @@ extends Node
 ## address is not, which fits that pattern of symptoms. This version sidesteps
 ## broadcast entirely: whoever creates a room is unambiguously the host (no
 ## more "lowest random id wins" race), and the "room code" the other player
-## types in is simply the host's own local network address - a direct
+## types in is a short number (the host's own last IP octet - see
+## local_room_code()/_resolve_room_code()) that resolves to a direct
 ## connection, not a broadcast, so it isn't subject to the same failure mode.
 ##
 ## Everything gameplay-relevant is host-authoritative: the host runs the
@@ -70,15 +71,27 @@ var _local_puppet_paddle: PaddleCharacter = null # client: represents the host's
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
-## The address shown/spoken to the hosting player as their "room code" - the
-## other player types this into Join Room. Prefers a private LAN-range IPv4
-## address (192.168.x.x / 10.x.x.x / 172.16-31.x.x) from a "normal-looking"
-## network adapter, since a device can have several addresses at once
-## (WiFi, Ethernet, VPN, virtual adapters from Hyper-V/VirtualBox/WSL etc.)
-## and only the one actually shared with the other player's device over
-## WiFi/LAN will work. Returns "" if nothing plausible was found (e.g. no
-## network connection at all).
+## The short code shown/spoken to the hosting player as their "room code" -
+## just this device's own last IP octet (e.g. "64" instead of the full
+## "192.168.1.64"), since two devices on the same WiFi/LAN almost always
+## share the same first three octets already - the joining device fills
+## those back in itself (see _resolve_room_code()) using its own detected
+## address, the same way a human would reasonably assume "we're on the same
+## network, so the first part must be the same". Returns "" if no address
+## could be found at all (see _local_ipv4()).
 static func local_room_code() -> String:
+	var ip: String = _local_ipv4()
+	if ip == "":
+		return ""
+	return ip.split(".")[3]
+
+## This device's own private LAN-range IPv4 address (192.168.x.x / 10.x.x.x
+## / 172.16-31.x.x), from a "normal-looking" network adapter, since a device
+## can have several addresses at once (WiFi, Ethernet, VPN, virtual adapters
+## from Hyper-V/VirtualBox/WSL etc.) and only the one actually shared with
+## the other player's device over WiFi/LAN is useful here. Returns "" if
+## nothing plausible was found (e.g. no network connection at all).
+static func _local_ipv4() -> String:
 	var preferred: Array[String] = []
 	var fallback: Array[String] = []
 	var deprioritized_keywords := ["virtual", "vmware", "vbox", "hyper-v", "loopback", "tunnel", "docker", "wsl", "bluetooth"]
@@ -115,6 +128,28 @@ static func _is_private_ipv4(ip: String) -> bool:
 		return second >= 16 and second <= 31
 	return false
 
+## Turns whatever the player typed into Join Room into a real address to
+## connect to. Accepts either the short code from local_room_code() (just
+## digits - combined with this device's own detected subnet, since both
+## devices being on the same WiFi/LAN means that part should already match)
+## or, as a fallback for the rare case that assumption is wrong, a full
+## dotted address typed in directly. Returns "" if it can't be resolved at
+## all (bad input, or this device has no network address of its own either).
+static func _resolve_room_code(code: String) -> String:
+	var trimmed: String = code.strip_edges()
+	if trimmed.find(".") != -1:
+		return trimmed
+	if not trimmed.is_valid_int():
+		return ""
+	var last_octet: int = int(trimmed)
+	if last_octet < 0 or last_octet > 255:
+		return ""
+	var own_ip: String = _local_ipv4()
+	if own_ip == "":
+		return ""
+	var own_octets: PackedStringArray = own_ip.split(".")
+	return "%s.%s.%s.%d" % [own_octets[0], own_octets[1], own_octets[2], last_octet]
+
 ## Becomes the host - starts listening immediately and waits for the other
 ## player to Join Room with the address from local_room_code().
 func create_room(local_name: String) -> void:
@@ -140,8 +175,14 @@ func join_room(local_name: String, room_code: String) -> void:
 	is_networked = true
 	is_host = false
 	_local_name = local_name
+	var target_ip: String = _resolve_room_code(room_code)
+	if target_ip == "":
+		is_networked = false
+		is_host = false
+		connection_failed.emit("invalid_code")
+		return
 	var peer := ENetMultiplayerPeer.new()
-	var err: int = peer.create_client(room_code, GAME_PORT)
+	var err: int = peer.create_client(target_ip, GAME_PORT)
 	if err != OK:
 		connection_failed.emit("client_failed")
 		return

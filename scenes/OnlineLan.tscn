@@ -97,6 +97,14 @@ visible = false
 text = "Waiting..."
 accessibility_name = "Waiting..."
 
+[node name="CopyCodeButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(280, 52)
+visible = false
+text = "Copy Room Code"
+accessibility_name = "Copy Room Code"
+accessibility_description = "Copy the room code to your clipboard so you can paste it into a text or chat message."
+
 [node name="CancelButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(260, 52)
