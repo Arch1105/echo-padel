@@ -62,6 +62,14 @@ custom_minimum_size = Vector2(260, 44)
 accessibility_name = "Language selector"
 accessibility_description = "Choose English or Spanish for menus and spoken announcements."
 
+[node name="VibrationCheck" type="CheckButton" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(260, 44)
+text = "Controller Vibration"
+button_pressed = true
+accessibility_name = "Controller vibration"
+accessibility_description = "Turn controller rumble on hits, bounces, and point outcomes on or off."
+
 [node name="BackButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(260, 52)

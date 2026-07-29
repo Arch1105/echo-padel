@@ -9,6 +9,7 @@ const LANGUAGE_KEYS := ["lang_english", "lang_spanish"]
 @onready var volume_slider: HSlider = $VBoxContainer/VolumeSlider
 @onready var language_label: Label = $VBoxContainer/LanguageLabel
 @onready var language_option: OptionButton = $VBoxContainer/LanguageOption
+@onready var vibration_check: CheckButton = $VBoxContainer/VibrationCheck
 @onready var back_button: Button = $VBoxContainer/BackButton
 
 func _ready() -> void:
@@ -21,6 +22,9 @@ func _ready() -> void:
 	_apply_text()
 	language_option.selected = maxi(LANGUAGES.find(GameSettings.language), 0)
 	language_option.item_selected.connect(_on_language_selected)
+
+	vibration_check.button_pressed = GameSettings.vibration_enabled
+	vibration_check.toggled.connect(_on_vibration_toggled)
 
 	back_button.pressed.connect(_on_back_pressed)
 	volume_slider.grab_focus()
@@ -46,6 +50,10 @@ func _apply_text() -> void:
 	language_option.accessibility_name = Loc.t("language_selector_access")
 	language_option.accessibility_description = Loc.t("language_selector_desc")
 
+	vibration_check.text = Loc.t("vibration_label")
+	vibration_check.accessibility_name = Loc.t("vibration_label")
+	vibration_check.accessibility_description = Loc.t("vibration_desc")
+
 	back_button.text = Loc.t("back_button")
 	back_button.accessibility_name = Loc.t("back_button")
 	back_button.accessibility_description = Loc.t("back_desc")
@@ -58,6 +66,9 @@ func _on_language_selected(index: int) -> void:
 	GameSettings.set_language(LANGUAGES[index])
 	_apply_text()
 	language_option.selected = index
+
+func _on_vibration_toggled(enabled: bool) -> void:
+	GameSettings.set_vibration_enabled(enabled)
 
 func _on_back_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")

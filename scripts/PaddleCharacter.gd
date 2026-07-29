@@ -1,7 +1,7 @@
 extends Node3D
 class_name PaddleCharacter
-## Shared base for the human player and the bot: both live on a Court.GRID x
-## Court.GRID grid on their own side of the net and move in discrete
+## Shared base for the human player and the bot: both live on a Court.COLS x
+## Court.ROWS grid on their own side of the net and move in discrete
 ## one-tile steps rather than continuously, so there's no physics body here -
 ## just grid coordinates mapped to world position via Court.cell_center().
 
@@ -18,8 +18,8 @@ const RACKET_NORMAL_COLOR := Color(0.12, 0.1, 0.09)
 const RACKET_SMASH_COLOR := Color(1.0, 0.15, 0.1)
 
 var side_label: String = "you"
-var current_col: int = (Court.GRID - 1) / 2
-var current_row_local: int = (Court.GRID - 1) / 2
+var current_col: int = (Court.COLS - 1) / 2
+var current_row_local: int = 0
 var ball: Ball
 
 ## How long a tile-to-tile step's *visual* glide takes - purely cosmetic,
@@ -169,8 +169,8 @@ func _snap_to_current_cell(animate: bool = false) -> void:
 ## Steps exactly one tile per call (delta_col/delta_row should be -1/0/1).
 ## Returns false if already at that edge of the grid.
 func move(delta_col: int, delta_row: int) -> bool:
-	var new_col: int = clampi(current_col + delta_col, 0, Court.GRID - 1)
-	var new_row: int = clampi(current_row_local + delta_row, 0, Court.GRID - 1)
+	var new_col: int = clampi(current_col + delta_col, 0, Court.COLS - 1)
+	var new_row: int = clampi(current_row_local + delta_row, 0, Court.ROWS - 1)
 	if new_col == current_col and new_row == current_row_local:
 		return false
 	current_col = new_col
@@ -178,11 +178,13 @@ func move(delta_col: int, delta_row: int) -> bool:
 	_snap_to_current_cell(true)
 	return true
 
-## Puts the character back at the standard starting tile - the closest
-## thing to a center on a grid that may not have an exact middle cell.
+## Puts the character back at the standard starting tile after every point -
+## the front-middle tile (nearest the net, center column), per feedback:
+## straight, left-spun, and right-spun shots all read as a deliberate choice
+## from a consistent, symmetric starting point for both players.
 func reset_position() -> void:
-	current_col = (Court.GRID - 1) / 2
-	current_row_local = (Court.GRID - 1) / 2
+	current_col = (Court.COLS - 1) / 2
+	current_row_local = 0
 	_snap_to_current_cell(false)
 
 ## Public entry point NetworkSession.gd uses (see net_paddle_position) to

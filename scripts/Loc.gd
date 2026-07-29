@@ -51,6 +51,9 @@ const STRINGS := {
 			"es": "Elige inglés o español para los menús y los anuncios de voz."},
 	"lang_english": {"en": "English", "es": "Inglés"},
 	"lang_spanish": {"en": "Spanish", "es": "Español"},
+	"vibration_label": {"en": "Controller Vibration", "es": "Vibración del mando"},
+	"vibration_desc": {"en": "Turn controller rumble on hits, bounces, and point outcomes on or off.",
+			"es": "Activa o desactiva la vibración del mando en golpes, botes y resultados de punto."},
 	"back_button": {"en": "Back", "es": "Atrás"},
 	"back_desc": {"en": "Return to the main menu.", "es": "Volver al menú principal."},
 
@@ -130,8 +133,8 @@ const STRINGS := {
 			"es": "Echo Padel es un partido de pádel que se juega enteramente de oído, en una pista dividida por una red. Suma puntos, gana juegos y sets, y gana el partido - puntuación estilo tenis: cero, 15, 30, 40, deuce y ventaja, el primero en llegar a 6 juegos (con diferencia de 2) gana el set, al mejor de tres sets, con muerte súbita si el marcador llega a 6 juegos iguales."},
 
 	"help_movement_heading": {"en": "Moving Around the Court", "es": "Moverte por la pista"},
-	"help_movement_body": {"en": "Use the arrow keys or WASD (or a controller's left stick) to step around your side of the court, one tile at a time. Your side is a 2 by 2 grid: left or right, and near the net or near your back wall.",
-			"es": "Usa las flechas o WASD (o el stick izquierdo de un mando) para moverte por tu lado de la pista, una casilla a la vez. Tu lado es una cuadrícula de 2 por 2: izquierda o derecha, y cerca de la red o cerca de tu pared del fondo."},
+	"help_movement_body": {"en": "Use the arrow keys or WASD (or a controller's left stick) to step around your side of the court, one tile at a time. Your side is a 3 by 2 grid: left, middle, or right, and near the net or near your back wall. You start every point on the front-middle tile.",
+			"es": "Usa las flechas o WASD (o el stick izquierdo de un mando) para moverte por tu lado de la pista, una casilla a la vez. Tu lado es una cuadrícula de 3 por 2: izquierda, centro o derecha, y cerca de la red o cerca de tu pared del fondo. Empiezas cada punto en la casilla central de delante."},
 
 	"help_hitting_heading": {"en": "Hitting the Ball", "es": "Golpear la pelota"},
 	"help_hitting_body": {"en": "Hold Space (or Xbox A / PS5 Cross) to charge a shot - the longer you hold it, the harder you hit. Release to swing. You'll hear the ball's first bounce as a locating cue, then a second bounce shortly after - swing while standing on the correct tile during that second bounce's window to return it. Miss the window, or swing from the wrong tile, and you fault the point.",
@@ -196,6 +199,7 @@ const STRINGS := {
 			"es": "Buscando a otro jugador para una partida rápida. Asegúrate de que su copia de Echo Padel esté en la misma WiFi y también haya elegido Modo rápido en línea."},
 
 	"online_mode_select_title": {"en": "Choose Online Mode", "es": "Elige el modo en línea"},
+	"online_coin_balance": {"en": "Coins: %d", "es": "Monedas: %d"},
 	"online_mode_button": {"en": "Online Mode", "es": "Modo en línea"},
 	"online_mode_desc": {"en": "Standard scoring: games and sets, best of three.",
 			"es": "Puntuación estándar: juegos y sets, al mejor de tres."},

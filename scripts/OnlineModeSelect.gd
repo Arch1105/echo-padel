@@ -7,6 +7,7 @@ extends Control
 ## actually connect (the host's choice always wins).
 
 @onready var title_label: Label = $VBoxContainer/Title
+@onready var coins_label: Label = $VBoxContainer/CoinsLabel
 @onready var online_button: Button = $VBoxContainer/OnlineModeButton
 @onready var quick_button: Button = $VBoxContainer/QuickModeButton
 @onready var store_button: Button = $VBoxContainer/StoreButton
@@ -29,6 +30,10 @@ func _unhandled_input(event: InputEvent) -> void:
 func _apply_text() -> void:
 	title_label.text = Loc.t("online_mode_select_title")
 	title_label.accessibility_name = Loc.t("online_mode_select_title")
+
+	var coin_text: String = Loc.t("online_coin_balance") % OnlineData.coins
+	coins_label.text = coin_text
+	coins_label.accessibility_name = coin_text
 
 	online_button.text = Loc.t("online_mode_button")
 	online_button.accessibility_name = Loc.t("online_mode_button")

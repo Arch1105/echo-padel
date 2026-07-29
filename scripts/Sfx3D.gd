@@ -136,7 +136,7 @@ func play_ui(sound_name: String, volume_db: float = 0.0) -> void:
 	player.play()
 	player.finished.connect(player.queue_free)
 
-## row_index: 0 (nearest the net) .. Court.GRID-1 (nearest the back wall),
+## row_index: 0 (nearest the net) .. Court.ROWS-1 (nearest the back wall),
 ## on whichever side the sound is occurring.
 func row_pitch_multiplier(row_index: int) -> float:
 	return ROW_PITCH_TABLE[clampi(row_index, 0, ROW_PITCH_TABLE.size() - 1)]
@@ -146,8 +146,16 @@ func row_pitch_multiplier(row_index: int) -> float:
 ## accessibility feedback, not just game-feel polish. Deliberately only used
 ## for events on the player's own side (their hit, their own-side bounces,
 ## point outcomes) - the opponent's side stays audio-only, same as it stays
-## on the muffled Distant bus rather than Near.
+## on the muffled Distant bus rather than Near. Respects Settings' vibration
+## toggle (GameSettings.vibration_enabled) - checked centrally here so every
+## call site gets it for free. Note: Godot's Input.start_joy_vibration only
+## reaches some controllers on Windows - reports of "no rumble at all" even
+## with this on are usually a DirectInput-only controller (common for some
+## PS4/PS5 pads over certain connections) rather than a bug here; Xbox
+## controllers (XInput) are the most reliable.
 func rumble(weak_magnitude: float, strong_magnitude: float, duration: float) -> void:
+	if not GameSettings.vibration_enabled:
+		return
 	for device in Input.get_connected_joypads():
 		Input.start_joy_vibration(device, weak_magnitude, strong_magnitude, duration)
 

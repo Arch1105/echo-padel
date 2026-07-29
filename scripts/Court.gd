@@ -1,10 +1,10 @@
 extends Node3D
 class_name Court
 ## Builds the padel court geometry and owns the grid<->world coordinate
-## mapping every other script uses. Two 2x2 grids (player nearest +Z, bot
-## nearest -Z) sit end-to-end split by a net at Z=0 - total court is 2 tiles
-## wide by 4 tiles deep - each with a real back wall behind its baseline
-## that shots can legally bank off.
+## mapping every other script uses. Two 3x2 grids (player nearest +Z, bot
+## nearest -Z) sit end-to-end split by a net at Z=0 - each side is 3 tiles
+## wide (left/middle/right) by 2 tiles deep - each with a real back wall
+## behind its baseline that shots can legally bank off.
 ##
 ## Purely visual/geometric - there's no physics engine involved. Movement is
 ## discrete grid-stepping (PaddleCharacter.gd) and the ball follows a
@@ -17,18 +17,23 @@ class_name Court
 ## it is interactive or gameplay-relevant (the ball only ever banks off the
 ## two BACK walls, never the sides - see Ball.gd).
 
-const GRID := 2
+## Across (left-right, x-axis) tiles per side - left/middle/right, so a
+## straight, left-spun, and right-spun shot each have their own landing tile.
+const COLS := 3
+## Deep (front-back, z-axis) tiles per side - unchanged from the original
+## court, only the width grew.
+const ROWS := 2
 const TILE_SIZE := 2.0
-const COURT_HALF_WIDTH := GRID * TILE_SIZE / 2.0 # 2.0
-const BACK_WALL_DISTANCE := GRID * TILE_SIZE # 4.0, from the net
+const COURT_HALF_WIDTH := COLS * TILE_SIZE / 2.0 # 3.0
+const BACK_WALL_DISTANCE := ROWS * TILE_SIZE # 4.0, from the net
 const HEAD_HEIGHT := 1.6
 const WALL_HEIGHT := 3.0
 const NET_HEIGHT := 0.9
 
 ## World position of the center of a grid cell. row_local 0 = nearest the
-## net, GRID-1 = nearest that side's back wall. is_player_side selects +Z vs -Z.
+## net, ROWS-1 = nearest that side's back wall. is_player_side selects +Z vs -Z.
 static func cell_center(is_player_side: bool, col: int, row_local: int) -> Vector3:
-	var x: float = (col - (GRID - 1) / 2.0) * TILE_SIZE
+	var x: float = (col - (COLS - 1) / 2.0) * TILE_SIZE
 	var z_offset: float = (row_local + 0.5) * TILE_SIZE
 	var z: float = z_offset if is_player_side else -z_offset
 	return Vector3(x, 0.0, z)
@@ -36,13 +41,13 @@ static func cell_center(is_player_side: bool, col: int, row_local: int) -> Vecto
 ## Inverse of cell_center's column mapping - which column an x coordinate
 ## falls in, clamped to the court (used for aiming/AI/spatial cell callouts).
 static func x_to_col(x: float) -> int:
-	var col: int = int(round(x / TILE_SIZE + (GRID - 1) / 2.0))
-	return clampi(col, 0, GRID - 1)
+	var col: int = int(round(x / TILE_SIZE + (COLS - 1) / 2.0))
+	return clampi(col, 0, COLS - 1)
 
 ## Inverse of cell_center's row mapping for one side (pass abs(z)).
 static func z_to_row_local(abs_z: float) -> int:
 	var row: int = int(floor(abs_z / TILE_SIZE))
-	return clampi(row, 0, GRID - 1)
+	return clampi(row, 0, ROWS - 1)
 
 func _ready() -> void:
 	_build_environment()
@@ -88,7 +93,7 @@ func _build_ground() -> void:
 func _build_floor(is_player_side: bool) -> void:
 	var mesh_instance := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
-	mesh.size = Vector3(GRID * TILE_SIZE, 0.1, GRID * TILE_SIZE)
+	mesh.size = Vector3(COLS * TILE_SIZE, 0.1, ROWS * TILE_SIZE)
 	mesh_instance.mesh = mesh
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.16, 0.35, 0.55) if is_player_side else Color(0.55, 0.2, 0.2)
@@ -101,7 +106,7 @@ func _build_floor(is_player_side: bool) -> void:
 func _build_net() -> void:
 	var mesh_instance := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
-	mesh.size = Vector3(GRID * TILE_SIZE + 0.4, NET_HEIGHT, 0.08)
+	mesh.size = Vector3(COLS * TILE_SIZE + 0.4, NET_HEIGHT, 0.08)
 	mesh_instance.mesh = mesh
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.9, 0.9, 0.9, 0.6)
@@ -121,14 +126,14 @@ func _build_net() -> void:
 		post_mesh.height = NET_HEIGHT + 0.2
 		post.mesh = post_mesh
 		post.material_override = post_mat
-		post.position = Vector3(side * (GRID * TILE_SIZE / 2.0 + 0.2), (NET_HEIGHT + 0.2) / 2.0, 0.0)
+		post.position = Vector3(side * (COLS * TILE_SIZE / 2.0 + 0.2), (NET_HEIGHT + 0.2) / 2.0, 0.0)
 		post.name = "NetPost_%s" % ("Left" if side < 0 else "Right")
 		add_child(post)
 
 func _build_back_wall(is_player_side: bool) -> void:
 	var mesh_instance := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
-	mesh.size = Vector3(GRID * TILE_SIZE + 0.4, WALL_HEIGHT, 0.15)
+	mesh.size = Vector3(COLS * TILE_SIZE + 0.4, WALL_HEIGHT, 0.15)
 	mesh_instance.mesh = mesh
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.75, 0.8, 0.85, 0.35)
@@ -159,15 +164,15 @@ func _build_side_walls() -> void:
 ## legible if anyone is sighted-testing this.
 func _build_side_markers() -> void:
 	for is_player_side in [true, false]:
-		for col in range(GRID + 1):
+		for col in range(COLS + 1):
 			var mesh_instance := MeshInstance3D.new()
 			var mesh := BoxMesh.new()
-			mesh.size = Vector3(0.03, 0.02, GRID * TILE_SIZE)
+			mesh.size = Vector3(0.03, 0.02, ROWS * TILE_SIZE)
 			mesh_instance.mesh = mesh
 			var mat := StandardMaterial3D.new()
 			mat.albedo_color = Color(1.0, 1.0, 1.0)
 			mesh_instance.material_override = mat
-			var x: float = (col - GRID / 2.0) * TILE_SIZE
+			var x: float = (col - COLS / 2.0) * TILE_SIZE
 			var z_center: float = BACK_WALL_DISTANCE / 2.0
 			mesh_instance.position = Vector3(x, 0.02, z_center if is_player_side else -z_center)
 			add_child(mesh_instance)
@@ -196,7 +201,7 @@ func _build_stands() -> void:
 		var sgn: float = 1.0 if is_player_side else -1.0
 		var base := Vector3(0.0, 0.0, sgn * (BACK_WALL_DISTANCE + 1.4))
 		_build_one_stand(base, Vector3(0.0, 0.0, sgn), Vector3(1.0, 0.0, 0.0),
-				GRID * TILE_SIZE + 2.0, stand_mat, spectator_colors)
+				COLS * TILE_SIZE + 2.0, stand_mat, spectator_colors)
 
 ## base_pos: the first (lowest, nearest-court) tier's center. away_dir: unit
 ## vector pointing outward from the court - each successive tier steps

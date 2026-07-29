@@ -47,8 +47,8 @@ func _await_ready_then_serve() -> void:
 func _serve() -> void:
 	player.cancel_charge()
 	player.reset_position()
-	var target_col: int = randi() % Court.GRID
-	var target_row: int = randi() % Court.GRID
+	var target_col: int = randi() % Court.COLS
+	var target_row: int = randi() % Court.ROWS
 	ball.start_serve(false, 1, 1, target_col, target_row)
 
 func _on_returned(by: String) -> void:

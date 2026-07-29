@@ -454,14 +454,21 @@ func puppet_apply_transform(pos: Vector3, is_dolly: bool, window_open: bool, tar
 	hit_window_open = window_open
 	_hop_target_side_is_player = target_side_is_player
 
+## Every ball sound (bounces, hit/smash/mishit/drop_shot, net_hit, wall_bank)
+## routes through here, and only these do - a single place to apply a small
+## uniform boost per feedback that they read as a touch too quiet, without
+## touching every individual call site's carefully-tuned relative level.
+const BALL_SOUND_BOOST_DB := 2.5
+
 ## Host-only equivalent of Sfx3D.play_at() that also relays the sound to a
 ## connected LAN client (mirrored for their perspective - see
 ## NetworkSession.relay_sound()). A no-op relay outside a networked host, so
 ## every call site can use this unconditionally without branching.
 func _play_and_relay(sound_name: String, pos: Vector3, volume_db: float, pitch: float, bus: String) -> void:
-	Sfx3D.play_at(sound_name, pos, volume_db, pitch, bus)
+	var boosted_db: float = volume_db + BALL_SOUND_BOOST_DB
+	Sfx3D.play_at(sound_name, pos, boosted_db, pitch, bus)
 	if NetworkSession.is_networked and NetworkSession.is_host:
-		NetworkSession.relay_sound(sound_name, pos, volume_db, pitch, bus)
+		NetworkSession.relay_sound(sound_name, pos, boosted_db, pitch, bus)
 
 ## The client's puppet Ball never runs _handle_bounce()/attempt_hit() itself
 ## (is_puppet skips all of that) - this is the receiving half, called from

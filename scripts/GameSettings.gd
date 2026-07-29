@@ -11,6 +11,7 @@ const SUPPORTED_LANGUAGES := ["en", "es"]
 var difficulty: String = "medium"
 var language: String = "en"
 var online_player_name: String = ""
+var vibration_enabled: bool = true
 
 func _ready() -> void:
 	load_settings()
@@ -30,13 +31,18 @@ func load_settings() -> void:
 	if lang in SUPPORTED_LANGUAGES:
 		language = lang
 	online_player_name = parsed.get("online_player_name", "")
+	vibration_enabled = bool(parsed.get("vibration_enabled", true))
 
 func save_settings() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
 		push_warning("GameSettings: could not write settings file")
 		return
-	file.store_string(JSON.stringify({"language": language, "online_player_name": online_player_name}, "\t"))
+	file.store_string(JSON.stringify({
+		"language": language,
+		"online_player_name": online_player_name,
+		"vibration_enabled": vibration_enabled,
+	}, "\t"))
 	file.close()
 
 func set_language(lang: String) -> void:
@@ -46,4 +52,8 @@ func set_language(lang: String) -> void:
 
 func set_online_player_name(player_name: String) -> void:
 	online_player_name = player_name
+	save_settings()
+
+func set_vibration_enabled(enabled: bool) -> void:
+	vibration_enabled = enabled
 	save_settings()
