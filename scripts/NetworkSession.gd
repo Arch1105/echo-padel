@@ -29,14 +29,29 @@ const DISCOVERY_PORT := 58271
 const GAME_PORT := 58272
 const DISCOVERY_BEACON_INTERVAL := 0.75
 const DISCOVERY_MAGIC := "ECHOPADEL_LAN_V1"
-const CONNECT_TIMEOUT := 8.0
+## Also loosened alongside DISCOVERY_TIMEOUT below - opening the actual game
+## connection (a different socket/port than discovery) can trigger its own
+## fresh Windows Firewall prompt on a device that hasn't been asked before
+## (including after an auto-update, since the .exe file itself changed) -
+## 8 seconds isn't much time to notice and click "Allow" before this used to
+## give up right underneath them.
+const CONNECT_TIMEOUT := 30.0
 ## Unlike the connect phase (CONNECT_TIMEOUT above), pure discovery -
 ## broadcasting and listening for a beacon, before either device is even
 ## found - previously had no timeout at all, so if beacons genuinely weren't
 ## reaching each other it just said "still searching" forever with no clear
 ## failure. This gives it an explicit failure after a generous wait, so a
 ## real problem at least surfaces instead of hanging silently.
-const DISCOVERY_TIMEOUT := 45.0
+##
+## Deliberately very generous (a few minutes, not tens of seconds) - two
+## non-technical players coordinating "ok, you press search now... ok, now
+## me" over voice/text can easily take longer than a minute to both land on
+## this screen, and a timeout firing on one device while the other hasn't
+## started searching yet would look exactly like "it doesn't connect" even
+## though nothing was actually wrong - a real regression this project hit
+## once already at a shorter value. This is meant as a distant safety net
+## for a genuinely dead search, not a tight timer.
+const DISCOVERY_TIMEOUT := 180.0
 
 var is_networked: bool = false
 var is_host: bool = false
