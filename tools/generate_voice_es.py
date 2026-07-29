@@ -25,6 +25,7 @@ VOICE = "es-ES-AlvaroNeural"
 
 LINES = {
 	"match_start": "Partido nuevo. Al mejor de tres sets. Tu saque.",
+	"quick_match_start": "Partido nuevo. A siete puntos, con dos de ventaja.",
 	"your_serve": "Tu saque.",
 	"bot_serve": "Saca el rival.",
 	"out": "Fuera.",

@@ -29,6 +29,14 @@ class_name MatchManager
 ## knows its own opponent's name from the discovery handshake; only the
 ## relay's existing timing cue does.
 ##
+## LAN matches can also opt into "Quick Online Mode" (see NetworkSession.
+## quick_mode, OnlineModeSelect.tscn) - the whole match becomes a single
+## race to 7 points, win by 2, with no games or sets at all. This reuses
+## _award_tiebreak_point()'s existing win condition unchanged (a regular
+## match's own 6-6 tiebreak uses the exact same rule); quick_mode (set from
+## _ready()) just decides whether reaching it ends the match outright instead
+## of starting a new set - see _start_quick_race().
+##
 ## Every serve (including the very first) waits for a "ready" press (Enter/
 ## Xbox B/PS5 Circle - the same button as a smash, just contextually never
 ## live at the same time) rather than firing right after the score
@@ -54,6 +62,15 @@ var in_tiebreak: bool = false
 var tiebreak_you: int = 0
 var tiebreak_bot: int = 0
 var match_over: bool = false
+
+## LAN-only (see NetworkSession.quick_mode) - "Quick Online Mode": the whole
+## match is a single race to 7 points, win by 2, no games/sets at all - the
+## exact same win condition a *regular* match's 6-6 tiebreak already uses
+## (see _award_tiebreak_point()), just run from the very first point instead
+## of only at 6 games all. Set from NetworkSession.quick_mode in _ready() -
+## the client reads it too (not just the host), purely so its own local
+## announce_score() knows to skip the irrelevant games/sets tallies.
+var quick_mode: bool = false
 
 var _awaiting_serve_confirm: bool = false
 var _host_ready_confirmed: bool = false
@@ -101,6 +118,9 @@ func _ready() -> void:
 	Music.stop_music()
 	player.match_manager = self
 
+	if NetworkSession.is_networked:
+		quick_mode = NetworkSession.quick_mode
+
 	var is_network_client: bool = NetworkSession.is_networked and not NetworkSession.is_host
 	if is_network_client:
 		# The client never runs this scoring state machine itself - see the
@@ -113,7 +133,7 @@ func _ready() -> void:
 	if NetworkSession.is_networked:
 		# LAN match: no AI, no Career - the "Bot" node is driven by the
 		# remote player's real input (see BotAI.gd/NetworkSession.gd).
-		_speak("match_start")
+		_speak("quick_match_start" if quick_mode else "match_start")
 	elif CareerRun.active:
 		bot.strength_override = CareerRun.current_strength()
 		Voice.say_dynamic("%s. %s. Your opponent: %s." %
@@ -125,7 +145,10 @@ func _ready() -> void:
 		ball.bounced.connect(bot._on_ball_bounced)
 		_speak("match_start")
 	ball.point_resolved.connect(_on_point_resolved)
-	_start_set()
+	if quick_mode:
+		_start_quick_race()
+	else:
+		_start_set()
 
 ## --- Speak-and-relay wrappers - see class doc comment. ---
 
@@ -174,6 +197,8 @@ func announce_score() -> void:
 		_speak_sequence(["num_%d" % tiebreak_you, "num_%d" % tiebreak_bot])
 	else:
 		_announce_current_score()
+	if quick_mode:
+		return  # no games/sets in Quick Online Mode - the race score above is the whole story
 	_speak_tally("you_prefix", sets_you, "sets_singular", "sets_plural")
 	_speak_tally("you_prefix", games_you, "games_singular", "games_plural")
 	if CareerRun.active:
@@ -183,6 +208,22 @@ func announce_score() -> void:
 	else:
 		_speak_tally("bot_prefix", sets_bot, "sets_singular", "sets_plural")
 		_speak_tally("bot_prefix", games_bot, "games_singular", "games_plural")
+
+## Quick Online Mode's entire match, in place of _start_set()/_start_game() -
+## goes straight into the same race-to-7-win-by-2 scoring _award_tiebreak_
+## point() already implements for a regular match's 6-6 tiebreak, just from
+## the very first point and ending the match outright on a win (see
+## _award_tiebreak_point()'s quick_mode branch) instead of starting a new set.
+func _start_quick_race() -> void:
+	in_tiebreak = true
+	tiebreak_you = 0
+	tiebreak_bot = 0
+	if server_is_you:
+		_speak("your_serve")
+	else:
+		_say_bot_serve()
+	_sync_network_score()
+	_await_ready_then_serve()
 
 func _start_set() -> void:
 	games_you = 0
@@ -318,11 +359,14 @@ func _award_tiebreak_point(winner: String) -> void:
 	_speak_sequence(["num_%d" % tiebreak_you, "num_%d" % tiebreak_bot])
 	if (tiebreak_you >= 7 and tiebreak_you - tiebreak_bot >= 2) or (tiebreak_bot >= 7 and tiebreak_bot - tiebreak_you >= 2):
 		var set_winner: String = "you" if tiebreak_you > tiebreak_bot else "bot"
+		in_tiebreak = false
+		if quick_mode:
+			_win_match(set_winner)
+			return
 		if set_winner == "you":
 			games_you = 7
 		else:
 			games_bot = 7
-		in_tiebreak = false
 		_win_set(set_winner)
 	else:
 		server_is_you = not server_is_you

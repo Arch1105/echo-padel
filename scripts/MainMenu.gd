@@ -115,7 +115,7 @@ func _on_career_pressed() -> void:
 		get_tree().change_scene_to_file("res://scenes/CareerMenu.tscn")
 
 func _on_play_online_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/OnlineLan.tscn")
+	get_tree().change_scene_to_file("res://scenes/OnlineModeSelect.tscn")
 
 func _on_settings_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/Settings.tscn")

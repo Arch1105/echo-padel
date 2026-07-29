@@ -142,8 +142,8 @@ const STRINGS := {
 			"es": "Si un golpe sale mal - por poca carga o un mal golpe del rival - la pelota queda 'globeada': lenta, alta y fácil. Solo entonces puedes pulsar Enter (o B en Xbox / Círculo en PS5) para rematar: un golpe aparte, siempre a máxima potencia, difícil - pero no imposible - de devolver para el otro lado. No puedes rematar una pelota normal, solo una globeada."},
 
 	"help_drop_shot_heading": {"en": "The Drop Shot", "es": "El golpe cortado"},
-	"help_drop_shot_body": {"en": "Hold Right Shift (or a controller's right trigger) to charge a drop shot - a separate button from the normal swing. Release to hit: no matter which direction you're holding, it always lands short in the front row, right near the net. A short tap is a genuine soft dink, more likely to clip the net; holding it longer makes it firmer and safer, but easier for the other side to reach in time. It has its own distinct sound, different from a normal hit.",
-			"es": "Mantén pulsada la tecla Shift derecha (o el gatillo derecho de un mando) para cargar un golpe cortado - un botón aparte del golpe normal. Suelta para golpear: sin importar qué dirección mantengas pulsada, siempre cae corto, cerca de la red. Una pulsación breve es un toque suave de verdad, con más riesgo de dar en la red; mantenerlo más tiempo lo hace más firme y seguro, pero más fácil de alcanzar para el otro lado. Tiene su propio sonido, distinto al de un golpe normal."},
+	"help_drop_shot_body": {"en": "Hold Right Shift (or a controller's right trigger) to charge a drop shot - a separate button from the normal swing. Release to hit: no matter which direction you're holding, it always lands short in the front row, right near the net. Barely tap it and you'll likely fault into the net; a slightly longer tap instead dollies up into a weak, easy ball, same as an under-charged normal shot; hold it longer still for a genuine, firm drop shot with its own distinct sound - safer, but easier for the other side to reach in time.",
+			"es": "Mantén pulsada la tecla Shift derecha (o el gatillo derecho de un mando) para cargar un golpe cortado - un botón aparte del golpe normal. Suelta para golpear: sin importar qué dirección mantengas pulsada, siempre cae corto, cerca de la red. Si apenas la tocas, es probable que falles a la red; una pulsación un poco más larga en cambio deja una pelota floja y fácil, igual que un golpe normal mal cargado; mantenla pulsada más tiempo para un golpe cortado firme de verdad, con su propio sonido - más seguro, pero más fácil de alcanzar para el otro lado."},
 
 	"help_shaping_heading": {"en": "Shot Shaping & the Wall Bank Shot", "es": "Dar forma al golpe y el golpe de pared"},
 	"help_shaping_body": {"en": "Whichever direction you're holding when you release your shot (or press smash) shapes it: Left or Right curves it that way, Back plays it off your own back wall first - carrying forward over the net, the real padel bank shot - and Forward drops it short near the net. Hold nothing for a flat, straight shot. On a controller, shot shaping uses the right stick instead, independent of the left stick's movement.",
@@ -188,6 +188,16 @@ const STRINGS := {
 	"lan_search_button": {"en": "Search for a Player", "es": "Buscar jugador"},
 	"lan_search_desc": {"en": "Start searching your local network for another Echo Padel player.",
 			"es": "Empieza a buscar a otro jugador de Echo Padel en tu red local."},
+	"lan_searching_quick_message": {"en": "Searching for another player for a quick match. Make sure their copy of Echo Padel is on the same WiFi and has also chosen Quick Online Mode.",
+			"es": "Buscando a otro jugador para una partida rápida. Asegúrate de que su copia de Echo Padel esté en la misma WiFi y también haya elegido Modo rápido en línea."},
+
+	"online_mode_select_title": {"en": "Choose Online Mode", "es": "Elige el modo en línea"},
+	"online_mode_button": {"en": "Online Mode", "es": "Modo en línea"},
+	"online_mode_desc": {"en": "Standard scoring: games and sets, best of three.",
+			"es": "Puntuación estándar: juegos y sets, al mejor de tres."},
+	"quick_online_mode_button": {"en": "Quick Online Mode", "es": "Modo rápido en línea"},
+	"quick_online_mode_desc": {"en": "Fast scoring: first to seven points, win by two, no games or sets.",
+			"es": "Puntuación rápida: el primero en llegar a siete puntos, con dos de ventaja, sin juegos ni sets."},
 }
 
 const TIER_NAMES_ES := [

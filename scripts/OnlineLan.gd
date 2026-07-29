@@ -4,6 +4,10 @@ extends Control
 ## shows up, then connects and drops both players into Match.tscn. Purely
 ## regular (non-Career) scoring for now - see NetworkSession.gd's class doc
 ## comment for why Career mode and LAN matches don't currently mix.
+##
+## Reached from OnlineModeSelect.tscn, which stages NetworkSession.quick_mode
+## before navigating here - this screen just displays whichever mode was
+## picked, it doesn't choose it.
 
 const REASSURANCE_INTERVAL := 12.0
 
@@ -63,7 +67,7 @@ func _begin_search() -> void:
 	status_label.visible = true
 	cancel_button.grab_focus()
 
-	var message: String = Loc.t("lan_searching_message")
+	var message: String = Loc.t("lan_searching_quick_message") if NetworkSession.quick_mode else Loc.t("lan_searching_message")
 	_set_status(message)
 	Voice.say_dynamic(message)
 	NetworkSession.begin_search(player_name)
@@ -74,8 +78,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_cancel_pressed()
 
 func _apply_text() -> void:
-	title_label.text = Loc.t("lan_title")
-	title_label.accessibility_name = Loc.t("lan_title")
+	var title: String = Loc.t("quick_online_mode_button") if NetworkSession.quick_mode else Loc.t("lan_title")
+	title_label.text = title
+	title_label.accessibility_name = title
 	name_prompt_label.text = Loc.t("lan_name_prompt")
 	name_prompt_label.accessibility_name = Loc.t("lan_name_prompt")
 	name_input.placeholder_text = Loc.t("name_input_placeholder")

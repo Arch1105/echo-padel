@@ -22,6 +22,7 @@ $synth.Volume = 100
 
 $lines = @{
     "match_start"         = "New match. Best of three sets. Your serve."
+    "quick_match_start"   = "New match. First to seven, win by two."
     "your_serve"          = "Your serve."
     "bot_serve"           = "Bot serves."
     "out"                 = "Out."

@@ -34,6 +34,12 @@ const CONNECT_TIMEOUT := 8.0
 var is_networked: bool = false
 var is_host: bool = false
 var opponent_name: String = ""
+## Set by the caller (see OnlineModeSelect.gd) *before* begin_search() - the
+## host's own value always wins once connected (see _handle_beacon()), since
+## only the host actually runs the match's scoring logic. A client's own
+## pre-connection preference is discarded in favor of whatever the host
+## chose, so both devices always agree on which rules the match is using.
+var quick_mode: bool = false
 var remote_ready_received: bool = false
 
 var _discovery_socket: PacketPeerUDP
@@ -101,7 +107,7 @@ func _reset_state() -> void:
 func _send_beacon() -> void:
 	if not _searching:
 		return
-	var msg: String = "%s|%d|%s" % [DISCOVERY_MAGIC, _session_id, _local_name]
+	var msg: String = "%s|%d|%s|%d" % [DISCOVERY_MAGIC, _session_id, _local_name, int(quick_mode)]
 	_discovery_socket.set_dest_address("255.255.255.255", DISCOVERY_PORT)
 	_discovery_socket.put_packet(msg.to_utf8_buffer())
 
@@ -125,9 +131,13 @@ func _handle_beacon(text: String, sender_ip: String) -> void:
 	if their_id == _session_id:
 		return  # our own broadcast looping back, or an astronomically unlikely id collision - ignore either way
 	opponent_name = parts[2]
+	var their_quick_mode: bool = parts.size() >= 4 and parts[3] == "1"
 	_searching = false
 	_beacon_timer.stop()
 	if their_id < _session_id:
+		# Becoming the client - adopt the host's mode choice, discarding our
+		# own pre-connection preference (see quick_mode's doc comment above).
+		quick_mode = their_quick_mode
 		_become_client(sender_ip)
 	else:
 		_become_host()

@@ -40,13 +40,14 @@ class_name Ball
 ## side receives it (player or bot); a drop shot (also its own dedicated
 ## button - see PlayerController.gd) always lands in the front row near the
 ## net regardless of held direction, with its own noticeably higher net-fault
-## floor than a normal shot (a real dink is meant to risk clipping the net)
-## and its own distinct sound, never classified as a mishit even at very low
-## power; a mishit (any *normal* hit below a low-power floor, whether
-## under-charged or the bot rolled one) "dollies" up into a weak, high, slow
-## ball instead - both of its bounces on the receiving side are elongated to
-## match, a real sitter that's easy to attack; anything else is a normal hit,
-## exactly as before.
+## floor than a normal shot (a real dink is meant to risk clipping the net) -
+## a brief tap above that floor still dollies up into a weak sitter exactly
+## like a weak normal shot would, only a real charge produces a genuine,
+## poised drop shot with its own distinct sound; a mishit (any hit - normal
+## or drop shot - below a low-power floor) "dollies" up into a weak, high,
+## slow ball instead - both of its bounces on the receiving side are
+## elongated to match, a real sitter that's easy to attack; anything else is
+## a normal hit, exactly as before.
 
 signal bounced(side_is_player: bool, col: int, row_local: int, bounce_number: int)
 signal returned(by: String)
@@ -78,9 +79,13 @@ const SMASH_DURATION := 0.32
 const SMASH_PEAK := 0.45
 const NET_MIN_POWER := 0.08
 ## A drop shot risks the net on purpose - a genuine dink barely clears it, so
-## this floor sits well above the normal-shot one (and above MISHIT_MAX_POWER
-## too, since a drop shot never gets classified as a mishit - see attempt_hit).
-const DROP_SHOT_NET_MIN_POWER := 0.22
+## this floor sits above the normal-shot one, widening how brief a tap has to
+## be before it's an outright fault. Above that floor but still below
+## MISHIT_MAX_POWER, a weak drop shot dollies up into an easy sitter exactly
+## like a weak *normal* shot would (see attempt_hit) - only a real charge
+## clears MISHIT_MAX_POWER and produces a genuine, poised drop shot with its
+## own distinct sound.
+const DROP_SHOT_NET_MIN_POWER := 0.12
 const MISHIT_MAX_POWER := 0.25
 const CURVE_SHIFT := Court.TILE_SIZE * 0.9
 ## Career-mode Racket upgrade: added to the player's own receiving grace
@@ -209,9 +214,17 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 		sound_name = "smash"
 		duration = SMASH_DURATION
 		peak_height = SMASH_PEAK
+	elif is_drop_shot and power < MISHIT_MAX_POWER:
+		# A brief-but-not-instant tap dollies up into an easy sitter, same as
+		# a weak normal shot would (per feedback: a tap shouldn't *always*
+		# fault into the net, just risk it more than a normal shot does).
+		sound_name = "mishit"
+		is_dolly = true
+		duration = lerp(MAX_DURATION, MIN_DURATION, power)
+		peak_height = lerp(MAX_PEAK, MIN_PEAK, power)
 	elif is_drop_shot:
-		# Never classified as a mishit/dolly - a drop shot is deliberately
-		# soft, that's not the same thing as a poorly-timed normal swing.
+		# A real charge - genuine, poised drop shot with its own distinct
+		# sound, never classified as a mishit/dolly.
 		sound_name = "drop_shot"
 		duration = lerp(MAX_DURATION, MIN_DURATION, power)
 		peak_height = lerp(MAX_PEAK, MIN_PEAK, power)
