@@ -169,8 +169,8 @@ const STRINGS := {
 			"es": "Inicia una carrera, ponle nombre a tu jugador, y sube desde la Liga Escolar hasta los Grand Slams y más allá, hasta el Salón de Campeones. Cada torneo es un cuadro de varias rondas - pierde una ronda y quedas fuera de ese torneo, aunque conservas tu nivel. Tres derrotas en torneos del mismo nivel te bajan un nivel (la Liga Escolar tiene intentos ilimitados). Gana un juego a cero - un juego en el que tu rival no anota ni un punto - y ganas un punto de mejora, que puedes gastar desde la pantalla de Mejoras del Centro de Carrera en la Fuerza de tu personaje (golpes normales más fuertes), Inteligencia (golpes con efecto colocados más lejos del centro), Velocidad (te mueves más rápido entre casillas) y Raqueta (una ventana de tiempo más generosa al golpear)."},
 
 	"help_online_extras_heading": {"en": "Online Coins & Emotes", "es": "Monedas y emotes en línea"},
-	"help_online_extras_body": {"en": "Winning an online match, in either Online Mode or Quick Online Mode, earns you 5 coins. Spend coins in the Emote Store (from the online menu) on celebration emotes - short music clips. During an online match, hold Left Shift (or a controller's left bumper) to open your emote menu, use Down to pick one you own, and press Enter to play it - your opponent hears it too, and so do you.",
-			"es": "Ganar un partido en línea, ya sea en Modo en línea o Modo rápido en línea, te da 5 monedas. Gástalas en la Tienda de emotes (desde el menú en línea) en emotes de celebración - clips musicales cortos. Durante un partido en línea, mantén pulsada la tecla Shift izquierda (o el gatillo izquierdo de un mando) para abrir tu menú de emotes, usa Abajo para elegir uno que tengas, y pulsa Enter para reproducirlo - tu rival también lo escuchará, y tú también."},
+	"help_online_extras_body": {"en": "Winning an online match, in either Online Mode or Quick Online Mode, earns you 5 coins. Spend coins in the Emote Store (from the online menu) on celebration emotes - short music clips. During an online match, hold Left Shift (or a controller's left bumper) to open your emote menu. On keyboard, use Down to pick one you own and Enter to play it; on a controller, the left and right bumpers cycle between them instead, and A (or Cross on PS5) plays the highlighted one. Your opponent hears it too, and so do you.",
+			"es": "Ganar un partido en línea, ya sea en Modo en línea o Modo rápido en línea, te da 5 monedas. Gástalas en la Tienda de emotes (desde el menú en línea) en emotes de celebración - clips musicales cortos. Durante un partido en línea, mantén pulsada la tecla Shift izquierda (o el gatillo izquierdo de un mando) para abrir tu menú de emotes. Con teclado, usa Abajo para elegir uno que tengas y Enter para reproducirlo; con un mando, los gatillos izquierdo y derecho los recorren en su lugar, y A (o Cruz en PS5) reproduce el que esté resaltado. Tu rival también lo escuchará, y tú también."},
 
 	"help_settings_heading": {"en": "Settings", "es": "Configuración"},
 	"help_settings_body": {"en": "Adjust the master volume and switch between English and Spanish menus and voice from the Settings screen, reachable from the main menu.",
@@ -226,6 +226,12 @@ const STRINGS := {
 	"emote_afro_pop": {"en": "Afro Pop", "es": "Afro pop"},
 	"emote_hip_hop": {"en": "Hip-Hop", "es": "Hip-hop"},
 	"emote_eastern_folk_dance": {"en": "Eastern European Folk Dance", "es": "Danza folclórica de Europa del Este"},
+	"emote_silly_voice": {"en": "Silly Voice", "es": "Voz graciosa"},
+	"emote_uk_drill": {"en": "UK Drill", "es": "UK Drill"},
+	"emote_villain_laugh": {"en": "Villain Laugh", "es": "Risa malvada"},
+	"emote_chiptune_victory": {"en": "Chiptune Victory", "es": "Victoria chiptune"},
+	"emote_airhorn_hype": {"en": "Airhorn Hype", "es": "Bocina de estadio"},
+	"emote_latin_party": {"en": "Latin Party", "es": "Fiesta latina"},
 
 	"emote_menu_title": {"en": "Emotes", "es": "Emotes"},
 	"emote_menu_empty": {"en": "You don't own any emotes yet - visit the Emote Store from the main menu.",

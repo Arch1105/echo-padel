@@ -71,6 +71,12 @@ const SOUNDS := {
 	"afro_pop": preload("res://audio/emotes/afro_pop.wav"),
 	"hip_hop": preload("res://audio/emotes/hip_hop.wav"),
 	"eastern_folk_dance": preload("res://audio/emotes/eastern_folk_dance.wav"),
+	"silly_voice": preload("res://audio/emotes/silly_voice.wav"),
+	"uk_drill": preload("res://audio/emotes/uk_drill.wav"),
+	"villain_laugh": preload("res://audio/emotes/villain_laugh.wav"),
+	"chiptune_victory": preload("res://audio/emotes/chiptune_victory.wav"),
+	"airhorn_hype": preload("res://audio/emotes/airhorn_hype.wav"),
+	"latin_party": preload("res://audio/emotes/latin_party.wav"),
 }
 
 ## Sounds happening on your own side play on this bus (full range, no cut).
