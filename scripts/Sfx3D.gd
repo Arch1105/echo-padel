@@ -89,6 +89,12 @@ const SOUNDS := {
 	"sarcastic_clap": preload("res://audio/emotes/sarcastic_clap.wav"),
 	"record_scratch": preload("res://audio/emotes/record_scratch.wav"),
 	"robot_target": preload("res://audio/emotes/robot_target.wav"),
+	"reggae_vibes": preload("res://audio/emotes/reggae_vibes.wav"),
+	"pirate_shanty": preload("res://audio/emotes/pirate_shanty.wav"),
+	"sweaty_line": preload("res://audio/emotes/sweaty_line.wav"),
+	"pirate_joke": preload("res://audio/emotes/pirate_joke.wav"),
+	"thunder_strike": preload("res://audio/emotes/thunder_strike.wav"),
+	"level_up": preload("res://audio/emotes/level_up.wav"),
 }
 
 ## Sounds happening on your own side play on this bus (full range, no cut).
