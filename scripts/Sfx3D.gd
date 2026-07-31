@@ -61,6 +61,7 @@ const SOUNDS := {
 	"bounce_second": BOUNCE_SOUNDS,
 	"hit": preload("res://audio/sfx/racket_hit.wav"),
 	"smash": preload("res://audio/sfx/smash_impact.wav"),
+	"super_smash_hit": preload("res://audio/sfx/super_smash_impact.wav"),
 	"mishit": preload("res://audio/sfx/racket_mishit.wav"),
 	"drop_shot": preload("res://audio/sfx/drop_shot.wav"),
 	"net_hit": preload("res://audio/sfx/net_hit.wav"),

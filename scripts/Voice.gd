@@ -237,7 +237,7 @@ const LINES_ES := {
 const PHRASES_EN := {
 	"match_start": "New match. Best of three sets. Your serve.",
 	"quick_match_start": "New match. First to seven, win by two.",
-	"wall_match_start": "New match. First to five points - once you're past five, win a point with a smash to win the match. Side walls are in play - shots that would go out bounce back into play instead. Your serve.",
+	"wall_match_start": "New match. First to five points, however you like - the first player to reach five doesn't win outright, but any point after that must be won by a smash to end the match. Side walls are in play - shots that would go out bounce back into play instead. Your serve.",
 	"super_smash": "Super Smash!",
 	"your_serve": "Your serve.",
 	"bot_serve": "Bot serves.",
@@ -308,7 +308,7 @@ const PHRASES_EN := {
 const PHRASES_ES := {
 	"match_start": "Partido nuevo. Al mejor de tres sets. Tu saque.",
 	"quick_match_start": "Partido nuevo. A siete puntos, con dos de ventaja.",
-	"wall_match_start": "Partido nuevo. Primero a cinco puntos - una vez que superes cinco, gana un punto con un remate para ganar el partido. Las paredes laterales están en juego - los golpes que saldrían fuera rebotan y siguen en juego. Tu saque.",
+	"wall_match_start": "Partido nuevo. Primero a cinco puntos, como sea - el primer jugador en llegar a cinco no gana directamente, pero cualquier punto después de eso debe ganarse con un remate para terminar el partido. Las paredes laterales están en juego - los golpes que saldrían fuera rebotan y siguen en juego. Tu saque.",
 	"super_smash": "¡Súper remate!",
 	"your_serve": "Tu saque.",
 	"bot_serve": "Saca el rival.",

@@ -53,16 +53,22 @@ class_name PlayerController
 ## than its own dedicated key, since the arrow keys are already this
 ## overloaded (movement/shaping) - F is otherwise unused.
 ##
-## Super Smash - a one-per-game power move. Press D-pad Up (or J) while the
-## ball is between its first and second bounce on your side (i.e. right
-## after you hear the first bounce) *and* it's dollied, then press the
-## smash button before the second bounce - miss either half of that timing
-## and it just quietly fails to arm/consumes as a normal smash instead, no
-## penalty. Landing it plays a distinct announcement and the ball crosses
-## much faster than a normal smash (see Ball.gd's SUPER_SMASH_DURATION).
-## "Per game" is tracked via the running games_you+games_bot total, which
-## MatchManager already keeps identical on both host and client via score
-## sync - no extra network message needed to reset it each new game.
+## Super Smash - a one-per-game power move. Hold D-pad Up (or J) and press
+## the smash button *together* - same physical shape as the F+arrow dash
+## above, just with the two keyboard keys this project's smash button
+## already used (J was already the keyboard equivalent of D-pad Up; Enter/
+## smash is unchanged) - while the ball is between its first and second
+## bounce on your side (i.e. right after you hear the first bounce) and
+## it's dollied. Miss that window and it's just a normal smash instead, no
+## penalty. No spin - holding a shape-stick direction does nothing on a
+## Super Smash specifically, unlike every other shot including a regular
+## smash. Landing it plays a distinct announcement and its own more
+## powerful-sounding impact, and the ball crosses much faster than a normal
+## smash and is noticeably harder (though never impossible) to return - see
+## Ball.gd's SUPER_SMASH_* constants. "Per game" is tracked via the running
+## games_you+games_bot total, which MatchManager already keeps identical on
+## both host and client via score sync - no extra network message needed to
+## reset it each new game.
 
 const MAX_CHARGE := 1.2
 
@@ -88,7 +94,6 @@ var _charge_elapsed: float = 0.0
 var _drop_charging: bool = false
 var _drop_charge_elapsed: float = 0.0
 ## Wall Mode only - see the class doc comment.
-var _super_smash_armed: bool = false
 var _super_smash_used_in_game: int = -1
 @onready var _listener: AudioListener3D = AudioListener3D.new()
 
@@ -128,14 +133,6 @@ func _physics_process(delta: float) -> void:
 		elif Input.is_action_just_pressed("move_back"):
 			_do_move(0, 1)
 
-	if NetworkSession.wall_mode and ball:
-		if Input.is_action_just_pressed("super_smash_arm") and _can_use_super_smash() \
-				and ball.hop_is_dolly and ball._hop_target_side_is_player == is_player_side \
-				and ball._hop_state == Ball.HopState.CONTINUATION:
-			_super_smash_armed = true
-		elif _super_smash_armed and ball._hop_state != Ball.HopState.CONTINUATION:
-			_super_smash_armed = false
-
 	if Input.is_action_just_pressed("swing"):
 		_drop_charging = false
 		_charging = true
@@ -156,7 +153,8 @@ func _physics_process(delta: float) -> void:
 
 	if Input.is_action_just_pressed("smash"):
 		_drop_charging = false
-		_attempt_smash()
+		var want_super: bool = NetworkSession.wall_mode and Input.is_action_pressed("super_smash_arm")
+		_attempt_smash(want_super)
 
 	if Input.is_action_just_pressed("check_score") and match_manager:
 		match_manager.announce_score()
@@ -238,17 +236,21 @@ func _release_swing() -> void:
 	_apply_career_upgrades(shape)
 	_submit_hit(shape)
 
-func _attempt_smash() -> void:
+## want_super: true when the smash button was pressed while D-pad Up/J was
+## also held (see _physics_process()) - only actually becomes a Super Smash
+## if the ball state qualifies too (dolly, between bounces, heading to this
+## player) and it hasn't been used yet this game; otherwise it's silently
+## just a regular smash, no penalty for a mistimed attempt.
+func _attempt_smash(want_super: bool = false) -> void:
 	_charging = false
 	var shape: Dictionary = _current_shape()
 	shape["power"] = 1.0
 	shape["is_smash"] = true
-	# Wall Mode only - consumes the arm (win or lose the point, this was the
-	# one use for this game) as long as it's still armed and the second
-	# bounce hasn't happened yet (see _physics_process()'s disarm check).
-	if _super_smash_armed and ball and ball._hop_state == Ball.HopState.CONTINUATION:
+	if want_super and _can_use_super_smash() and ball and ball.hop_is_dolly \
+			and ball._hop_target_side_is_player == is_player_side \
+			and ball._hop_state == Ball.HopState.CONTINUATION:
 		shape["is_super_smash"] = true
-		_super_smash_armed = false
+		shape["curve"] = 0  # no spin on a Super Smash - see class doc comment
 		_super_smash_used_in_game = _current_game_number()
 	_apply_career_upgrades(shape)
 	_submit_hit(shape)

@@ -425,13 +425,19 @@ func _award_tiebreak_point(winner: String) -> void:
 ## point normally once you're past the threshold does nothing special - you
 ## just keep playing, same as before you crossed it.
 func _award_wall_point(winner: String, won_via_smash: bool) -> void:
+	# Eligibility is based on the count *before* this point - reaching the
+	# threshold for the first time must always be reachable by any means
+	# (per feedback: a smash that happens to be the point that first gets
+	# you to the threshold shouldn't win outright, or the threshold itself
+	# would only ever be reachable by smash too). Only a point won by smash
+	# *after* you're already there ends the match.
+	var was_eligible: bool = (tiebreak_you if winner == "you" else tiebreak_bot) >= WALL_SMASH_THRESHOLD
 	if winner == "you":
 		tiebreak_you += 1
 	else:
 		tiebreak_bot += 1
 	_speak_sequence(["num_%d" % tiebreak_you, "num_%d" % tiebreak_bot])
-	var winner_count: int = tiebreak_you if winner == "you" else tiebreak_bot
-	if winner_count >= WALL_SMASH_THRESHOLD and won_via_smash:
+	if was_eligible and won_via_smash:
 		_win_match(winner)
 		return
 	server_is_you = not server_is_you

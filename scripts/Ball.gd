@@ -85,6 +85,11 @@ const DOLLY_SECOND_BOUNCE_DURATION := 1.4
 const SMASH_SECOND_BOUNCE_HEIGHT := 0.18
 const SMASH_SECOND_BOUNCE_DURATION := 0.2
 const SMASH_HIT_WINDOW_GRACE := 0.15
+## A Super Smash's receiving bounce is tighter still than a regular smash's -
+## genuinely very difficult, but never zero/impossible, per feedback.
+const SUPER_SMASH_SECOND_BOUNCE_HEIGHT := 0.14
+const SUPER_SMASH_SECOND_BOUNCE_DURATION := 0.15
+const SUPER_SMASH_HIT_WINDOW_GRACE := 0.1
 const SERVE_DURATION := 0.9
 const SERVE_PEAK := 1.4
 const MIN_DURATION := 0.45
@@ -128,6 +133,7 @@ var _hop_allow_side_wall_bank: bool = false
 var _hop_side_wall_x: float = 0.0
 var hop_is_dolly: bool = false
 var _hop_is_smash: bool = false
+var _hop_is_super_smash: bool = false
 var _continuation_elapsed: float = 0.0
 var _continuation_duration: float = SECOND_BOUNCE_DURATION
 var _grace_duration: float = HIT_WINDOW_GRACE
@@ -249,11 +255,20 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 	if is_smash and not hop_is_dolly:
 		return false
 
+	# Wall Mode's one-per-game Super Smash - validated against wall_mode
+	# itself here (not just trusted from the shape dict) since this is the
+	# one place that actually resolves a hit; PlayerController.gd already
+	# only ever sets this flag inside Wall Mode, but the host - the only
+	# device that ever reaches this code - shouldn't honor it if it somehow
+	# arrived any other way. No spin allowed on one, also enforced here
+	# rather than just trusting the client already zeroed it.
+	var is_super_smash: bool = is_smash and NetworkSession.wall_mode and shape.get("is_super_smash", false)
+
 	hit_window_open = false
 	_hop_state = HopState.NONE
 
 	var power: float = clampf(shape.get("power", 0.5), 0.0, 1.0)
-	var curve: int = clampi(shape.get("curve", 0), -1, 1)
+	var curve: int = 0 if is_super_smash else clampi(shape.get("curve", 0), -1, 1)
 	var depth: int = clampi(shape.get("depth", 0), -1, 1)
 	# Any shot landing short (depth > 0) reads as a drop shot, whether it came
 	# from the dedicated drop-shot button (which always sets depth to 1
@@ -278,15 +293,8 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 	var is_dolly: bool = false
 	var duration: float
 	var peak_height: float
-	# Wall Mode's one-per-game Super Smash - validated against wall_mode
-	# itself here (not just trusted from the shape dict) since this is the
-	# one place that actually resolves a hit; PlayerController.gd already
-	# only ever sets this flag inside Wall Mode, but the host - the only
-	# device that ever reaches this code - shouldn't honor it if it somehow
-	# arrived any other way.
-	var is_super_smash: bool = is_smash and NetworkSession.wall_mode and shape.get("is_super_smash", false)
 	if is_smash:
-		sound_name = "smash"
+		sound_name = "super_smash_hit" if is_super_smash else "smash"
 		duration = SUPER_SMASH_DURATION if is_super_smash else SMASH_DURATION
 		peak_height = SUPER_SMASH_PEAK if is_super_smash else SMASH_PEAK
 	elif is_drop_shot and power < MISHIT_MAX_POWER:
@@ -379,7 +387,7 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 	if hitter_side_is_player:
 		var volume_db: float = -2.0 if sound_name == "mishit" else 4.0
 		_play_and_relay(sound_name, from, volume_db, 1.0, Sfx3D.NEAR_BUS)
-		if sound_name == "smash":
+		if is_smash:
 			Sfx3D.rumble_smash()
 		else:
 			var m: PackedFloat32Array = _hit_rumble_magnitudes(sound_name)
@@ -390,15 +398,15 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 		# that's not the host's action to feel) - but the client needs to feel
 		# THEIR OWN hit on their OWN controller, which only a relay can do.
 		if NetworkSession.is_networked and NetworkSession.is_host:
-			if sound_name == "smash":
+			if is_smash:
 				NetworkSession.relay_rumble_smash()
 			else:
 				var m: PackedFloat32Array = _hit_rumble_magnitudes(sound_name)
 				NetworkSession.relay_rumble(m[0], m[1], m[2])
-	if sound_name == "smash":
+	if is_smash:
 		_spawn_smash_fireworks(from)
 	_launch_flight(from, to, duration, peak_height, target_side_is_player, allow_bank, hitter_side_is_player,
-			is_dolly, is_smash, allow_side_wall_bank, side_wall_x)
+			is_dolly, is_smash, allow_side_wall_bank, side_wall_x, is_super_smash)
 	returned.emit(by)
 	return true
 
@@ -483,7 +491,7 @@ func _spawn_bounce_flash_local(pos: Vector3) -> void:
 func _launch_flight(from: Vector3, to: Vector3, duration: float, peak_height: float,
 		target_side_is_player: bool, allow_wall_bank: bool, bank_side_is_player: bool = false,
 		is_dolly: bool = false, is_smash: bool = false,
-		allow_side_wall_bank: bool = false, side_wall_x: float = 0.0) -> void:
+		allow_side_wall_bank: bool = false, side_wall_x: float = 0.0, is_super_smash: bool = false) -> void:
 	global_position = from
 	_vx = (to.x - from.x) / duration
 	_vz = (to.z - from.z) / duration
@@ -494,6 +502,7 @@ func _launch_flight(from: Vector3, to: Vector3, duration: float, peak_height: fl
 	_hop_bank_side_is_player = bank_side_is_player
 	hop_is_dolly = is_dolly
 	_hop_is_smash = is_smash
+	_hop_is_super_smash = is_super_smash
 	_hop_allow_side_wall_bank = allow_side_wall_bank
 	_hop_side_wall_x = side_wall_x
 	_hop_state = HopState.FLIGHT
@@ -633,6 +642,10 @@ func _handle_bounce() -> void:
 			cont_height = DOLLY_SECOND_BOUNCE_HEIGHT
 			_continuation_duration = DOLLY_SECOND_BOUNCE_DURATION
 			_grace_duration = HIT_WINDOW_GRACE
+		elif _hop_is_super_smash:
+			cont_height = SUPER_SMASH_SECOND_BOUNCE_HEIGHT
+			_continuation_duration = SUPER_SMASH_SECOND_BOUNCE_DURATION
+			_grace_duration = SUPER_SMASH_HIT_WINDOW_GRACE
 		elif _hop_is_smash:
 			cont_height = SMASH_SECOND_BOUNCE_HEIGHT
 			_continuation_duration = SMASH_SECOND_BOUNCE_DURATION
