@@ -53,22 +53,24 @@ class_name PlayerController
 ## than its own dedicated key, since the arrow keys are already this
 ## overloaded (movement/shaping) - F is otherwise unused.
 ##
-## Super Smash - a one-per-game power move. Hold D-pad Up (or J) and press
-## the smash button *together* - same physical shape as the F+arrow dash
-## above, just with the two keyboard keys this project's smash button
-## already used (J was already the keyboard equivalent of D-pad Up; Enter/
-## smash is unchanged) - while the ball is between its first and second
-## bounce on your side (i.e. right after you hear the first bounce) and
-## it's dollied. Miss that window and it's just a normal smash instead, no
-## penalty. No spin - holding a shape-stick direction does nothing on a
-## Super Smash specifically, unlike every other shot including a regular
-## smash. Landing it plays a distinct announcement and its own more
-## powerful-sounding impact, and the ball crosses much faster than a normal
-## smash and is noticeably harder (though never impossible) to return - see
-## Ball.gd's SUPER_SMASH_* constants. "Per game" is tracked via the running
-## games_you+games_bot total, which MatchManager already keeps identical on
-## both host and client via score sync - no extra network message needed to
-## reset it each new game.
+## Super Smash - a one-per-game power move. Hold the left trigger (or J on
+## keyboard) and press the smash button *together* - while the ball is
+## between its first and second bounce on your side (i.e. right after you
+## hear the first bounce) and it's dollied. Miss that window and it's just a
+## normal smash instead, no penalty. No spin - holding a shape-stick
+## direction does nothing on a Super Smash specifically, unlike every other
+## shot including a regular smash. Landing it speaks a distinct "Super
+## Smash!" announcement and *waits for it to finish* before the ball
+## actually gets hit (see Ball.gd's SUPER_SMASH_ANNOUNCE_DELAY) - the whole
+## point is a warning the opponent has time to hear and react to, not
+## something that arrives at the same instant as the ball itself, which
+## would defeat the purpose for a screen-reader player. It also has its own
+## more powerful-sounding impact, and the ball crosses much faster than a
+## normal smash and is noticeably harder (though never impossible) to
+## return - see Ball.gd's other SUPER_SMASH_* constants. "Per game" is
+## tracked via the running games_you+games_bot total, which MatchManager
+## already keeps identical on both host and client via score sync - no
+## extra network message needed to reset it each new game.
 
 const MAX_CHARGE := 1.2
 
@@ -236,8 +238,9 @@ func _release_swing() -> void:
 	_apply_career_upgrades(shape)
 	_submit_hit(shape)
 
-## want_super: true when the smash button was pressed while D-pad Up/J was
-## also held (see _physics_process()) - only actually becomes a Super Smash
+## want_super: true when the smash button was pressed while the left
+## trigger/J was also held (see _physics_process()) - only actually becomes
+## a Super Smash
 ## if the ball state qualifies too (dolly, between bounces, heading to this
 ## player) and it hasn't been used yet this game; otherwise it's silently
 ## just a regular smash, no penalty for a mistimed attempt.

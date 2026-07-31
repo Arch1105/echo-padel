@@ -103,6 +103,12 @@ const SMASH_PEAK := 0.45
 ## comment) - noticeably faster/flatter still than a regular smash.
 const SUPER_SMASH_DURATION := 0.18
 const SUPER_SMASH_PEAK := 0.3
+## How long attempt_hit() waits after speaking "Super Smash!" before the
+## ball actually gets hit - covers the longer of the two pre-rendered
+## fallback clips (English ~1.78s, Spanish ~2.02s) with a small buffer, so
+## the announcement is always heard in full before the (much faster) ball
+## arrives, giving the opponent a real chance to react.
+const SUPER_SMASH_ANNOUNCE_DELAY := 2.2
 const NET_MIN_POWER := 0.08
 ## A drop shot risks the net on purpose - a genuine dink barely clears it, so
 ## this floor sits above the normal-shot one, widening how brief a tap has to
@@ -267,6 +273,20 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 	hit_window_open = false
 	_hop_state = HopState.NONE
 
+	# Super Smash: announce first, then actually wait for it to finish
+	# speaking before the ball gets hit - the whole point is a warning the
+	# opponent has time to react to, not something that lands at the same
+	# instant as the (much faster) ball itself. Deliberately as early as
+	# possible in this function - the rest of the shot's math below doesn't
+	# depend on real time passing, so delaying here (rather than delaying
+	# just before the eventual _launch_flight() call) keeps this the one
+	# and only place attempt_hit() ever waits.
+	if is_super_smash:
+		NetworkSession.speak_local_keys(["super_smash"])
+		if NetworkSession.is_networked and NetworkSession.is_host:
+			NetworkSession.relay_speak(["super_smash"])
+		await get_tree().create_timer(SUPER_SMASH_ANNOUNCE_DELAY).timeout
+
 	var power: float = clampf(shape.get("power", 0.5), 0.0, 1.0)
 	var curve: int = 0 if is_super_smash else clampi(shape.get("curve", 0), -1, 1)
 	var depth: int = clampi(shape.get("depth", 0), -1, 1)
@@ -380,10 +400,6 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 	_last_hitter = by
 	_last_hit_was_smash = is_smash
 	_bounce_count_this_side = 0
-	if is_super_smash:
-		NetworkSession.speak_local_keys(["super_smash"])
-		if NetworkSession.is_networked and NetworkSession.is_host:
-			NetworkSession.relay_speak(["super_smash"])
 	if hitter_side_is_player:
 		var volume_db: float = -2.0 if sound_name == "mishit" else 4.0
 		_play_and_relay(sound_name, from, volume_db, 1.0, Sfx3D.NEAR_BUS)
