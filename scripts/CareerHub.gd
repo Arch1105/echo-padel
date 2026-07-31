@@ -71,6 +71,7 @@ func _refresh() -> void:
 		btn.accessibility_description = Loc.t("resume_desc")
 		btn.pressed.connect(_on_resume_pressed)
 		tournament_buttons.add_child(btn)
+		btn.grab_focus()
 		return
 
 	if tier == CareerTiers.SLAM_TIER:
@@ -93,6 +94,11 @@ func _refresh() -> void:
 		btn.accessibility_description = Loc.t("enter_tier_desc") % tier_name
 		btn.pressed.connect(_on_enter_tier.bind(tier))
 		tournament_buttons.add_child(btn)
+
+	if tournament_buttons.get_child_count() > 0:
+		tournament_buttons.get_child(0).grab_focus()
+	else:
+		upgrades_button.grab_focus()
 
 func _on_resume_pressed() -> void:
 	CareerRun.resume_from_save()
