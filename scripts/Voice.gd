@@ -124,6 +124,38 @@ const LINES_EN := {
 	"num_18": preload("res://audio/voice/en/num_18.wav"),
 	"num_19": preload("res://audio/voice/en/num_19.wav"),
 	"num_20": preload("res://audio/voice/en/num_20.wav"),
+	# Wall Mode's point race has no upper cap - see Voice.gd's _play_clip()
+	# for the screen-reader fallback used for anything higher still.
+	"num_21": preload("res://audio/voice/en/num_21.wav"),
+	"num_22": preload("res://audio/voice/en/num_22.wav"),
+	"num_23": preload("res://audio/voice/en/num_23.wav"),
+	"num_24": preload("res://audio/voice/en/num_24.wav"),
+	"num_25": preload("res://audio/voice/en/num_25.wav"),
+	"num_26": preload("res://audio/voice/en/num_26.wav"),
+	"num_27": preload("res://audio/voice/en/num_27.wav"),
+	"num_28": preload("res://audio/voice/en/num_28.wav"),
+	"num_29": preload("res://audio/voice/en/num_29.wav"),
+	"num_30": preload("res://audio/voice/en/num_30.wav"),
+	"num_31": preload("res://audio/voice/en/num_31.wav"),
+	"num_32": preload("res://audio/voice/en/num_32.wav"),
+	"num_33": preload("res://audio/voice/en/num_33.wav"),
+	"num_34": preload("res://audio/voice/en/num_34.wav"),
+	"num_35": preload("res://audio/voice/en/num_35.wav"),
+	"num_36": preload("res://audio/voice/en/num_36.wav"),
+	"num_37": preload("res://audio/voice/en/num_37.wav"),
+	"num_38": preload("res://audio/voice/en/num_38.wav"),
+	"num_39": preload("res://audio/voice/en/num_39.wav"),
+	"num_40": preload("res://audio/voice/en/num_40.wav"),
+	"num_41": preload("res://audio/voice/en/num_41.wav"),
+	"num_42": preload("res://audio/voice/en/num_42.wav"),
+	"num_43": preload("res://audio/voice/en/num_43.wav"),
+	"num_44": preload("res://audio/voice/en/num_44.wav"),
+	"num_45": preload("res://audio/voice/en/num_45.wav"),
+	"num_46": preload("res://audio/voice/en/num_46.wav"),
+	"num_47": preload("res://audio/voice/en/num_47.wav"),
+	"num_48": preload("res://audio/voice/en/num_48.wav"),
+	"num_49": preload("res://audio/voice/en/num_49.wav"),
+	"num_50": preload("res://audio/voice/en/num_50.wav"),
 }
 
 const LINES_ES := {
@@ -229,6 +261,36 @@ const LINES_ES := {
 	"num_18": preload("res://audio/voice/es/num_18.mp3"),
 	"num_19": preload("res://audio/voice/es/num_19.mp3"),
 	"num_20": preload("res://audio/voice/es/num_20.mp3"),
+	"num_21": preload("res://audio/voice/es/num_21.mp3"),
+	"num_22": preload("res://audio/voice/es/num_22.mp3"),
+	"num_23": preload("res://audio/voice/es/num_23.mp3"),
+	"num_24": preload("res://audio/voice/es/num_24.mp3"),
+	"num_25": preload("res://audio/voice/es/num_25.mp3"),
+	"num_26": preload("res://audio/voice/es/num_26.mp3"),
+	"num_27": preload("res://audio/voice/es/num_27.mp3"),
+	"num_28": preload("res://audio/voice/es/num_28.mp3"),
+	"num_29": preload("res://audio/voice/es/num_29.mp3"),
+	"num_30": preload("res://audio/voice/es/num_30.mp3"),
+	"num_31": preload("res://audio/voice/es/num_31.mp3"),
+	"num_32": preload("res://audio/voice/es/num_32.mp3"),
+	"num_33": preload("res://audio/voice/es/num_33.mp3"),
+	"num_34": preload("res://audio/voice/es/num_34.mp3"),
+	"num_35": preload("res://audio/voice/es/num_35.mp3"),
+	"num_36": preload("res://audio/voice/es/num_36.mp3"),
+	"num_37": preload("res://audio/voice/es/num_37.mp3"),
+	"num_38": preload("res://audio/voice/es/num_38.mp3"),
+	"num_39": preload("res://audio/voice/es/num_39.mp3"),
+	"num_40": preload("res://audio/voice/es/num_40.mp3"),
+	"num_41": preload("res://audio/voice/es/num_41.mp3"),
+	"num_42": preload("res://audio/voice/es/num_42.mp3"),
+	"num_43": preload("res://audio/voice/es/num_43.mp3"),
+	"num_44": preload("res://audio/voice/es/num_44.mp3"),
+	"num_45": preload("res://audio/voice/es/num_45.mp3"),
+	"num_46": preload("res://audio/voice/es/num_46.mp3"),
+	"num_47": preload("res://audio/voice/es/num_47.mp3"),
+	"num_48": preload("res://audio/voice/es/num_48.mp3"),
+	"num_49": preload("res://audio/voice/es/num_49.mp3"),
+	"num_50": preload("res://audio/voice/es/num_50.mp3"),
 }
 
 ## Mirrors the phrases baked into the wav/mp3 clips above - must match
@@ -455,6 +517,15 @@ func _speak_via_screen_reader(text: String) -> bool:
 func _play_clip(key: String) -> void:
 	var stream: AudioStream = _lines().get(key)
 	if stream == null:
+		# Wall Mode's point race has no upper cap, so a score can climb past
+		# however many "num_N" clips are actually pre-rendered (currently
+		# 0-50, see generate_voice_en.py/generate_voice_es.py) - rather than
+		# just going silent for those, fall back to speaking the digits
+		# through the screen-reader bridge so the score is still announced
+		# "as far as it needs to" go, even if it's silent without a screen
+		# reader running (same limitation say_dynamic() already documents).
+		if key.begins_with("num_"):
+			_speak_via_screen_reader(key.substr(4))
 		return
 	if _player.playing:
 		_queue.append(key)

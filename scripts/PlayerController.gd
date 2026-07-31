@@ -54,11 +54,13 @@ class_name PlayerController
 ## overloaded (movement/shaping) - F is otherwise unused.
 ##
 ## Super Smash - a one-per-game power move. Just press the left trigger (or
-## J on keyboard) alone - no combo with the smash button - while the ball is
-## between its first and second bounce on your side (i.e. right after you
-## hear the first bounce) and it's dollied. Outside that window it's simply
-## ignored (the left trigger has no other meaning during a match), so there's
-## no risk of it misfiring into a regular smash. No spin - holding a
+## J on keyboard) alone - no combo with the smash button - any time the ball
+## is dollied on your side, exactly the same timing as a regular smash (no
+## extra "must be between bounces" restriction - per feedback that was one
+## puzzle too many stacked on top of the once-per-game limit). Press it on a
+## ball that isn't dollied and it's simply ignored (the left trigger has no
+## other meaning during a match), so there's no risk of it misfiring into a
+## regular smash. No spin - holding a
 ## shape-stick direction does nothing on a Super Smash specifically, unlike
 ## every other shot including a regular smash. Landing it speaks a distinct
 ## "Super Smash!" announcement and *waits for it to finish* before the ball
@@ -159,16 +161,15 @@ func _physics_process(delta: float) -> void:
 		_attempt_smash()
 
 	# Wall Mode only - a single press of the left trigger (or J) is the
-	# whole Super Smash input, no combo with the smash button needed (per
-	# feedback: the combo was hard to actually land). Only does anything at
-	# all when every condition is already met right now - ball dollied,
-	# heading to this player, between its first and second bounce, and not
-	# used yet this game - otherwise it's a complete no-op, not a fallback
-	# regular smash, since the left trigger has no other meaning in a match.
+	# whole Super Smash input. Same timing window as a regular smash (any
+	# dollied ball heading to this player, first bounce or second - no extra
+	# timing puzzle on top of the once-per-game limit). Only does anything at
+	# all when every condition is already met right now - otherwise it's a
+	# complete no-op, not a fallback regular smash, since the left trigger
+	# has no other meaning in a match.
 	if Input.is_action_just_pressed("super_smash_arm") and NetworkSession.wall_mode and ball \
 			and _can_use_super_smash() and ball.hop_is_dolly \
-			and ball._hop_target_side_is_player == is_player_side \
-			and ball._hop_state == Ball.HopState.CONTINUATION:
+			and ball._hop_target_side_is_player == is_player_side:
 		_charging = false
 		_drop_charging = false
 		_attempt_smash(true)
@@ -256,18 +257,17 @@ func _release_swing() -> void:
 ## want_super: true when the caller (see _physics_process()'s dedicated
 ## super_smash_arm branch) already believes the left trigger/J press landed
 ## inside a valid Super Smash window. Still re-checked here against the live
-## ball state (dolly, between bounces, heading to this player) and the
-## once-per-game flag before actually flagging the shape as a Super Smash -
-## this call is the single source of truth, so a stale or racy caller can
-## never sneak one through.
+## ball state (dolly, heading to this player) and the once-per-game flag
+## before actually flagging the shape as a Super Smash - this call is the
+## single source of truth, so a stale or racy caller can never sneak one
+## through.
 func _attempt_smash(want_super: bool = false) -> void:
 	_charging = false
 	var shape: Dictionary = _current_shape()
 	shape["power"] = 1.0
 	shape["is_smash"] = true
 	if want_super and _can_use_super_smash() and ball and ball.hop_is_dolly \
-			and ball._hop_target_side_is_player == is_player_side \
-			and ball._hop_state == Ball.HopState.CONTINUATION:
+			and ball._hop_target_side_is_player == is_player_side:
 		shape["is_super_smash"] = true
 		shape["curve"] = 0  # no spin on a Super Smash - see class doc comment
 		_super_smash_used_in_game = _current_game_number()

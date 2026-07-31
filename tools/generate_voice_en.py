@@ -94,7 +94,7 @@ LINES = {
 	"coord_back": "back.",
 }
 
-for _i in range(21):
+for _i in range(51):
 	LINES[f"num_{_i}"] = str(_i)
 
 # Career-mode opponent surnames (see OpponentNames.gd's LAST_NAMES - this

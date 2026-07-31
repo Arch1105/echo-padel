@@ -95,6 +95,8 @@ const SOUNDS := {
 	"pirate_joke": preload("res://audio/emotes/pirate_joke.wav"),
 	"thunder_strike": preload("res://audio/emotes/thunder_strike.wav"),
 	"level_up": preload("res://audio/emotes/level_up.wav"),
+	"country_twang": preload("res://audio/emotes/country_twang.wav"),
+	"disco_groove": preload("res://audio/emotes/disco_groove.wav"),
 }
 
 ## Sounds happening on your own side play on this bus (full range, no cut).
