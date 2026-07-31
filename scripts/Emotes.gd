@@ -22,6 +22,10 @@ const CATALOG := [
 	{"id": "game_over_trailer", "name_key": "emote_game_over_trailer", "price": 7},
 	{"id": "too_easy_tease", "name_key": "emote_too_easy_tease", "price": 8},
 	{"id": "champions_taunt", "name_key": "emote_champions_taunt", "price": 10},
+	{"id": "sarcastic_clap", "name_key": "emote_sarcastic_clap", "price": 2},
+	{"id": "gg_chime", "name_key": "emote_gg_chime", "price": 3},
+	{"id": "record_scratch", "name_key": "emote_record_scratch", "price": 4},
+	{"id": "robot_target", "name_key": "emote_robot_target", "price": 5},
 ]
 
 static func find(emote_id: String) -> Dictionary:

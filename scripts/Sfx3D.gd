@@ -84,6 +84,10 @@ const SOUNDS := {
 	"too_easy_tease": preload("res://audio/emotes/too_easy_tease.wav"),
 	"game_over_trailer": preload("res://audio/emotes/game_over_trailer.wav"),
 	"sad_trombone": preload("res://audio/emotes/sad_trombone.wav"),
+	"gg_chime": preload("res://audio/emotes/gg_chime.wav"),
+	"sarcastic_clap": preload("res://audio/emotes/sarcastic_clap.wav"),
+	"record_scratch": preload("res://audio/emotes/record_scratch.wav"),
+	"robot_target": preload("res://audio/emotes/robot_target.wav"),
 }
 
 ## Sounds happening on your own side play on this bus (full range, no cut).
