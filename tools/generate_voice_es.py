@@ -26,7 +26,8 @@ VOICE = "es-ES-AlvaroNeural"
 LINES = {
 	"match_start": "Partido nuevo. Al mejor de tres sets. Tu saque.",
 	"quick_match_start": "Partido nuevo. A siete puntos, con dos de ventaja.",
-	"wall_match_start": "Partido nuevo. Al mejor de tres sets. Las paredes laterales están en juego - los golpes que saldrían fuera rebotan y siguen en juego. Tu saque.",
+	"wall_match_start": "Partido nuevo. Primero a cinco puntos - una vez que superes cinco, gana un punto con un remate para ganar el partido. Las paredes laterales están en juego - los golpes que saldrían fuera rebotan y siguen en juego. Tu saque.",
+	"super_smash": "¡Súper remate!",
 	"your_serve": "Tu saque.",
 	"bot_serve": "Saca el rival.",
 	"out": "Fuera.",

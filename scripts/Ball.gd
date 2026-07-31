@@ -64,7 +64,11 @@ class_name Ball
 
 signal bounced(side_is_player: bool, col: int, row_local: int, bounce_number: int)
 signal returned(by: String)
-signal point_resolved(winner: String, reason: String)
+## won_via_smash: true only when reason is "missed" (a return failure) and
+## the shot the receiver failed to return was itself a smash - see
+## _last_hit_was_smash below. Only meaningful to Wall Mode's win condition
+## (see MatchManager.gd's _award_wall_point()) - every other mode ignores it.
+signal point_resolved(winner: String, reason: String, won_via_smash: bool)
 
 enum HopState { NONE, FLIGHT, CONTINUATION, FROZEN_AWAITING_HIT }
 
@@ -90,6 +94,10 @@ const MAX_PEAK := 1.8
 ## A smash is faster and flatter than even a normal full-power hit.
 const SMASH_DURATION := 0.32
 const SMASH_PEAK := 0.45
+## Wall Mode's one-per-game Super Smash (see PlayerController.gd's class doc
+## comment) - noticeably faster/flatter still than a regular smash.
+const SUPER_SMASH_DURATION := 0.18
+const SUPER_SMASH_PEAK := 0.3
 const NET_MIN_POWER := 0.08
 ## A drop shot risks the net on purpose - a genuine dink barely clears it, so
 ## this floor sits above the normal-shot one, widening how brief a tap has to
@@ -126,6 +134,7 @@ var _grace_duration: float = HIT_WINDOW_GRACE
 var _grace_elapsed: float = 0.0
 
 var _last_hitter: String = ""
+var _last_hit_was_smash: bool = false
 var _bounce_count_this_side: int = 0
 
 var target_col: int = -1
@@ -210,6 +219,7 @@ func start_serve(server_side_is_player: bool, server_col: int, server_row_local:
 	var land_col: int = target_col_override if target_col_override >= 0 else server_col
 	var to: Vector3 = Court.cell_center(target_side_is_player, land_col, land_row)
 	_last_hitter = "you" if server_side_is_player else "bot"
+	_last_hit_was_smash = false
 	_bounce_count_this_side = 0
 	_launch_flight(from, to, SERVE_DURATION, SERVE_PEAK, target_side_is_player, false)
 
@@ -268,10 +278,17 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 	var is_dolly: bool = false
 	var duration: float
 	var peak_height: float
+	# Wall Mode's one-per-game Super Smash - validated against wall_mode
+	# itself here (not just trusted from the shape dict) since this is the
+	# one place that actually resolves a hit; PlayerController.gd already
+	# only ever sets this flag inside Wall Mode, but the host - the only
+	# device that ever reaches this code - shouldn't honor it if it somehow
+	# arrived any other way.
+	var is_super_smash: bool = is_smash and NetworkSession.wall_mode and shape.get("is_super_smash", false)
 	if is_smash:
 		sound_name = "smash"
-		duration = SMASH_DURATION
-		peak_height = SMASH_PEAK
+		duration = SUPER_SMASH_DURATION if is_super_smash else SMASH_DURATION
+		peak_height = SUPER_SMASH_PEAK if is_super_smash else SMASH_PEAK
 	elif is_drop_shot and power < MISHIT_MAX_POWER:
 		# A brief-but-not-instant tap dollies up into an easy sitter, same as
 		# a weak normal shot would (per feedback: a tap shouldn't *always*
@@ -353,7 +370,12 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 		allow_side_wall_bank = true
 
 	_last_hitter = by
+	_last_hit_was_smash = is_smash
 	_bounce_count_this_side = 0
+	if is_super_smash:
+		NetworkSession.speak_local_keys(["super_smash"])
+		if NetworkSession.is_networked and NetworkSession.is_host:
+			NetworkSession.relay_speak(["super_smash"])
 	if hitter_side_is_player:
 		var volume_db: float = -2.0 if sound_name == "mishit" else 4.0
 		_play_and_relay(sound_name, from, volume_db, 1.0, Sfx3D.NEAR_BUS)
@@ -649,4 +671,9 @@ func _handle_bounce() -> void:
 func _resolve_fault(reason: String, winner: String) -> void:
 	_hop_state = HopState.NONE
 	hit_window_open = false
-	point_resolved.emit(winner, reason)
+	# "missed" means the receiver failed to return the last successful hit -
+	# won_via_smash is only ever true for that case, and only if that hit was
+	# itself a smash (a netted/out smash attempt loses the point instead, not
+	# "won by smash" for the opponent who did nothing but receive it).
+	var won_via_smash: bool = reason == "missed" and _last_hit_was_smash
+	point_resolved.emit(winner, reason, won_via_smash)

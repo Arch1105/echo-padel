@@ -39,6 +39,30 @@ class_name PlayerController
 ## No audio feedback plays during a normal charge (per playtest feedback,
 ## the soundscape is kept to just hits/bounces/point outcomes) - you gauge
 ## power by how long you held it, same as you would in real life.
+##
+## Two more moves exist, but only in LAN Wall Mode (NetworkSession.wall_mode -
+## see Ball.gd's class doc comment for the wall-bounce mechanic they're built
+## around):
+##
+## Side dash - D-pad Left/Right on a controller, or hold F and press the
+## Left/Right arrow key - jumps straight to that side's edge tile, skipping
+## the middle column entirely, so you can actually get across in time to
+## return a shot that just bounced off a side wall to the opposite side.
+## Same move-suppression-while-charging rule as normal movement. The
+## keyboard version is deliberately a held-modifier + arrow combo rather
+## than its own dedicated key, since the arrow keys are already this
+## overloaded (movement/shaping) - F is otherwise unused.
+##
+## Super Smash - a one-per-game power move. Press D-pad Up (or J) while the
+## ball is between its first and second bounce on your side (i.e. right
+## after you hear the first bounce) *and* it's dollied, then press the
+## smash button before the second bounce - miss either half of that timing
+## and it just quietly fails to arm/consumes as a normal smash instead, no
+## penalty. Landing it plays a distinct announcement and the ball crosses
+## much faster than a normal smash (see Ball.gd's SUPER_SMASH_DURATION).
+## "Per game" is tracked via the running games_you+games_bot total, which
+## MatchManager already keeps identical on both host and client via score
+## sync - no extra network message needed to reset it each new game.
 
 const MAX_CHARGE := 1.2
 
@@ -63,6 +87,9 @@ var _charging: bool = false
 var _charge_elapsed: float = 0.0
 var _drop_charging: bool = false
 var _drop_charge_elapsed: float = 0.0
+## Wall Mode only - see the class doc comment.
+var _super_smash_armed: bool = false
+var _super_smash_used_in_game: int = -1
 @onready var _listener: AudioListener3D = AudioListener3D.new()
 
 func _ready() -> void:
@@ -81,7 +108,18 @@ func _physics_process(delta: float) -> void:
 	var drop_shot_held: bool = Input.is_action_pressed("drop_shot")
 
 	if not swinging_held and not drop_shot_held:
-		if Input.is_action_just_pressed("move_left"):
+		# Wall Mode only (see class doc comment) - F is otherwise a complete
+		# no-op, so a plain arrow press outside Wall Mode always behaves as a
+		# normal one-tile move regardless of whether F happens to be held.
+		var dash_left: bool = NetworkSession.wall_mode and (Input.is_action_just_pressed("dash_left") or
+				(Input.is_key_pressed(KEY_F) and Input.is_action_just_pressed("move_left")))
+		var dash_right: bool = NetworkSession.wall_mode and (Input.is_action_just_pressed("dash_right") or
+				(Input.is_key_pressed(KEY_F) and Input.is_action_just_pressed("move_right")))
+		if dash_left:
+			_do_side_dash(-1)
+		elif dash_right:
+			_do_side_dash(1)
+		elif Input.is_action_just_pressed("move_left"):
 			_do_move(-1, 0)
 		elif Input.is_action_just_pressed("move_right"):
 			_do_move(1, 0)
@@ -89,6 +127,14 @@ func _physics_process(delta: float) -> void:
 			_do_move(0, -1)
 		elif Input.is_action_just_pressed("move_back"):
 			_do_move(0, 1)
+
+	if NetworkSession.wall_mode and ball:
+		if Input.is_action_just_pressed("super_smash_arm") and _can_use_super_smash() \
+				and ball.hop_is_dolly and ball._hop_target_side_is_player == is_player_side \
+				and ball._hop_state == Ball.HopState.CONTINUATION:
+			_super_smash_armed = true
+		elif _super_smash_armed and ball._hop_state != Ball.HopState.CONTINUATION:
+			_super_smash_armed = false
 
 	if Input.is_action_just_pressed("swing"):
 		_drop_charging = false
@@ -152,6 +198,24 @@ func _do_move(delta_col: int, delta_row: int) -> void:
 	if NetworkSession.is_networked and not NetworkSession.is_host:
 		NetworkSession.submit_move.rpc(delta_col, delta_row)
 
+## Wall Mode only - jumps straight to the near/far edge column, skipping
+## whatever's in between, by computing the delta move() needs to land
+## exactly there - reuses _do_move()'s existing clamping/relay unchanged,
+## since an oversized delta already clamps to a legal edge column on its own.
+func _do_side_dash(direction: int) -> void:
+	var target_col: int = 0 if direction < 0 else Court.COLS - 1
+	_do_move(target_col - current_col, 0)
+
+## Wall Mode only - see class doc comment. games_you/games_bot are already
+## kept identical on host and client via score sync, so their running total
+## doubles as a "which game are we in" number with no extra network message
+## needed just to reset this every new game.
+func _current_game_number() -> int:
+	return match_manager.games_you + match_manager.games_bot if match_manager else 0
+
+func _can_use_super_smash() -> bool:
+	return NetworkSession.wall_mode and _super_smash_used_in_game != _current_game_number()
+
 func _current_shape() -> Dictionary:
 	var curve := 0
 	if Input.is_action_pressed("move_left") or Input.is_action_pressed("shape_left"):
@@ -179,6 +243,13 @@ func _attempt_smash() -> void:
 	var shape: Dictionary = _current_shape()
 	shape["power"] = 1.0
 	shape["is_smash"] = true
+	# Wall Mode only - consumes the arm (win or lose the point, this was the
+	# one use for this game) as long as it's still armed and the second
+	# bounce hasn't happened yet (see _physics_process()'s disarm check).
+	if _super_smash_armed and ball and ball._hop_state == Ball.HopState.CONTINUATION:
+		shape["is_super_smash"] = true
+		_super_smash_armed = false
+		_super_smash_used_in_game = _current_game_number()
 	_apply_career_upgrades(shape)
 	_submit_hit(shape)
 

@@ -35,7 +35,16 @@ class_name MatchManager
 ## _award_tiebreak_point()'s existing win condition unchanged (a regular
 ## match's own 6-6 tiebreak uses the exact same rule); quick_mode (set from
 ## _ready()) just decides whether reaching it ends the match outright instead
-## of starting a new set - see _start_quick_race().
+## of starting a new set - see _start_point_race().
+##
+## Wall Mode (NetworkSession.wall_mode) uses a third scoring system, entirely
+## its own: also a single continuous point race (no games/sets), but the
+## race itself never ends on points alone - reaching WALL_SMASH_THRESHOLD
+## just makes you *eligible* to win, and the match only actually ends when an
+## eligible player wins a point specifically by smash (see Ball.gd's
+## won_via_smash/_last_hit_was_smash and _award_wall_point() below). Once
+## both players are past the threshold it's simple sudden death: whoever
+## lands the next smash-won point wins, however long that takes.
 ##
 ## Every serve (including the very first) waits for a "ready" press (Enter/
 ## Xbox B/PS5 Circle - the same button as a smash, just contextually never
@@ -46,6 +55,8 @@ class_name MatchManager
 ## ready independently before every point, not just whoever's serving.
 
 const POINT_WORDS := ["love", "fifteen", "thirty", "forty"]
+## Wall Mode only - see class doc comment and _award_wall_point().
+const WALL_SMASH_THRESHOLD := 5
 
 @onready var ball: Ball = $Ball
 @onready var player: PlayerController = $Player
@@ -169,8 +180,8 @@ func _ready() -> void:
 		ball.bounced.connect(bot._on_ball_bounced)
 		_speak("match_start")
 	ball.point_resolved.connect(_on_point_resolved)
-	if quick_mode:
-		_start_quick_race()
+	if quick_mode or wall_mode:
+		_start_point_race()
 	else:
 		_start_set()
 
@@ -221,8 +232,8 @@ func announce_score() -> void:
 		_speak_sequence(["num_%d" % tiebreak_you, "num_%d" % tiebreak_bot])
 	else:
 		_announce_current_score()
-	if quick_mode:
-		return  # no games/sets in Quick Online Mode - the race score above is the whole story
+	if quick_mode or wall_mode:
+		return  # no games/sets in a single-race mode - the race score above is the whole story
 	_speak_tally("you_prefix", sets_you, "sets_singular", "sets_plural")
 	_speak_tally("you_prefix", games_you, "games_singular", "games_plural")
 	if CareerRun.active:
@@ -233,12 +244,14 @@ func announce_score() -> void:
 		_speak_tally("bot_prefix", sets_bot, "sets_singular", "sets_plural")
 		_speak_tally("bot_prefix", games_bot, "games_singular", "games_plural")
 
-## Quick Online Mode's entire match, in place of _start_set()/_start_game() -
-## goes straight into the same race-to-7-win-by-2 scoring _award_tiebreak_
-## point() already implements for a regular match's 6-6 tiebreak, just from
-## the very first point and ending the match outright on a win (see
-## _award_tiebreak_point()'s quick_mode branch) instead of starting a new set.
-func _start_quick_race() -> void:
+## Quick Online Mode's and Wall Mode's entire match, in place of _start_set()/
+## _start_game() - both are a single continuous point race from 0-0 instead
+## of games/sets, they just disagree about when it actually ends: Quick Mode
+## reuses _award_tiebreak_point()'s race-to-7-win-by-2 (the same rule a
+## regular match's own 6-6 tiebreak already uses); Wall Mode routes to
+## _award_wall_point() instead, whose win condition is "past the threshold
+## and won by smash" rather than any point total on its own.
+func _start_point_race() -> void:
 	in_tiebreak = true
 	tiebreak_you = 0
 	tiebreak_bot = 0
@@ -273,14 +286,14 @@ func _serve() -> void:
 	var server: PaddleCharacter = player if server_is_you else bot
 	ball.start_serve(server_is_you, server.current_col, server.current_row_local)
 
-func _on_point_resolved(winner: String, reason: String) -> void:
+func _on_point_resolved(winner: String, reason: String, won_via_smash: bool) -> void:
 	if match_over:
 		return
 	_speak(reason)
 	await get_tree().create_timer(0.6).timeout
-	_award_point(winner)
+	_award_point(winner, won_via_smash)
 
-func _award_point(winner: String) -> void:
+func _award_point(winner: String, won_via_smash: bool = false) -> void:
 	Sfx3D.play_ui("cheer" if winner == "you" else "boo")
 	if NetworkSession.is_networked and NetworkSession.is_host:
 		NetworkSession.relay_cheer_or_boo(winner == "you")
@@ -296,6 +309,9 @@ func _award_point(winner: String) -> void:
 		_speak("point_you")
 	else:
 		_say_bot_prefixed("point_bot", "point_prefix")
+	if wall_mode:
+		_award_wall_point(winner, won_via_smash)
+		return
 	if in_tiebreak:
 		_award_tiebreak_point(winner)
 		return
@@ -400,6 +416,27 @@ func _award_tiebreak_point(winner: String) -> void:
 		server_is_you = not server_is_you
 		_sync_network_score()
 		_await_ready_then_serve()
+
+## Wall Mode's win condition - see class doc comment. Points always keep
+## counting up (no win-by-2 cap, no upper bound at all) - the match only
+## ends when the point that was JUST won both (a) pushes the winner's own
+## count to WALL_SMASH_THRESHOLD or beyond, AND (b) was won specifically by
+## a smash (won_via_smash, from Ball.gd's point_resolved signal). Winning a
+## point normally once you're past the threshold does nothing special - you
+## just keep playing, same as before you crossed it.
+func _award_wall_point(winner: String, won_via_smash: bool) -> void:
+	if winner == "you":
+		tiebreak_you += 1
+	else:
+		tiebreak_bot += 1
+	_speak_sequence(["num_%d" % tiebreak_you, "num_%d" % tiebreak_bot])
+	var winner_count: int = tiebreak_you if winner == "you" else tiebreak_bot
+	if winner_count >= WALL_SMASH_THRESHOLD and won_via_smash:
+		_win_match(winner)
+		return
+	server_is_you = not server_is_you
+	_sync_network_score()
+	_await_ready_then_serve()
 
 func _win_set(winner: String) -> void:
 	if winner == "you":
