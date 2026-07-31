@@ -57,6 +57,13 @@ var opponent_name: String = ""
 ## pre-connection preference once connected (see net_room_info()), so both
 ## devices always agree on which rules the match is using.
 var quick_mode: bool = false
+## Same set-before-create_room()/host-wins pattern as quick_mode above - a
+## third LAN mode (see OnlineModeSelect.gd) that keeps regular games/sets
+## scoring but turns the court's side walls interactive (see Ball.gd's class
+## doc comment). Mutually exclusive with quick_mode in the UI (only one mode
+## button is ever picked), but nothing here enforces that - it's just never
+## offered as a combination.
+var wall_mode: bool = false
 var remote_ready_received: bool = false
 
 var _local_name: String = ""
@@ -235,16 +242,18 @@ func submit_name(their_name: String) -> void:
 	if not is_host:
 		return
 	opponent_name = their_name
-	net_room_info.rpc_id(multiplayer.get_remote_sender_id(), _local_name, quick_mode)
+	net_room_info.rpc_id(multiplayer.get_remote_sender_id(), _local_name, quick_mode, wall_mode)
 	role_decided.emit(is_host)
 	opponent_connected.emit()
 
 ## Client side: the host's reply to submit_name() above - carries the host's
-## name and which scoring rules to use (see quick_mode's doc comment).
+## name and which scoring/court rules to use (see quick_mode's/wall_mode's
+## doc comments).
 @rpc("authority", "reliable")
-func net_room_info(host_name: String, host_quick_mode: bool) -> void:
+func net_room_info(host_name: String, host_quick_mode: bool, host_wall_mode: bool) -> void:
 	opponent_name = host_name
 	quick_mode = host_quick_mode
+	wall_mode = host_wall_mode
 	role_decided.emit(is_host)
 	opponent_connected.emit()
 

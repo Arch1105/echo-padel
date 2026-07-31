@@ -25,6 +25,7 @@ const SECTIONS := [
 	["help_training_heading", "help_training_body"],
 	["help_career_heading", "help_career_body"],
 	["help_online_extras_heading", "help_online_extras_body"],
+	["help_wall_mode_heading", "help_wall_mode_body"],
 	["help_settings_heading", "help_settings_body"],
 ]
 

@@ -24,6 +24,7 @@ extends Node
 const LINES_EN := {
 	"match_start": preload("res://audio/voice/en/match_start.wav"),
 	"quick_match_start": preload("res://audio/voice/en/quick_match_start.wav"),
+	"wall_match_start": preload("res://audio/voice/en/wall_match_start.wav"),
 	"your_serve": preload("res://audio/voice/en/your_serve.wav"),
 	"bot_serve": preload("res://audio/voice/en/bot_serve.wav"),
 	"out": preload("res://audio/voice/en/out.wav"),
@@ -127,6 +128,7 @@ const LINES_EN := {
 const LINES_ES := {
 	"match_start": preload("res://audio/voice/es/match_start.mp3"),
 	"quick_match_start": preload("res://audio/voice/es/quick_match_start.mp3"),
+	"wall_match_start": preload("res://audio/voice/es/wall_match_start.mp3"),
 	"your_serve": preload("res://audio/voice/es/your_serve.mp3"),
 	"bot_serve": preload("res://audio/voice/es/bot_serve.mp3"),
 	"out": preload("res://audio/voice/es/out.mp3"),
@@ -233,6 +235,7 @@ const LINES_ES := {
 const PHRASES_EN := {
 	"match_start": "New match. Best of three sets. Your serve.",
 	"quick_match_start": "New match. First to seven, win by two.",
+	"wall_match_start": "New match. Best of three sets. Side walls are in play - shots that would go out bounce back into play instead. Your serve.",
 	"your_serve": "Your serve.",
 	"bot_serve": "Bot serves.",
 	"out": "Out.",
@@ -302,6 +305,7 @@ const PHRASES_EN := {
 const PHRASES_ES := {
 	"match_start": "Partido nuevo. Al mejor de tres sets. Tu saque.",
 	"quick_match_start": "Partido nuevo. A siete puntos, con dos de ventaja.",
+	"wall_match_start": "Partido nuevo. Al mejor de tres sets. Las paredes laterales están en juego - los golpes que saldrían fuera rebotan y siguen en juego. Tu saque.",
 	"your_serve": "Tu saque.",
 	"bot_serve": "Saca el rival.",
 	"out": "Fuera.",

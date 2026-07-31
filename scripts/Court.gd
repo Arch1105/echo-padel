@@ -10,12 +10,16 @@ class_name Court
 ## discrete grid-stepping (PaddleCharacter.gd) and the ball follows a
 ## scripted parabolic path (Ball.gd), so nothing here needs collision shapes.
 ##
-## Sighted-player visuals only, all of this: side glass walls, net posts, a
-## surrounding ground apron, simple crowd stands, and a sky background - the
-## original two-rectangles-and-a-net version worked fine for gameplay but
-## per feedback read as "floating in a void" to sighted spectators. None of
-## it is interactive or gameplay-relevant (the ball only ever banks off the
-## two BACK walls, never the sides - see Ball.gd).
+## Mostly sighted-player visuals: net posts, a surrounding ground apron,
+## simple crowd stands, and a sky background - the original two-rectangles-
+## and-a-net version worked fine for gameplay but per feedback read as
+## "floating in a void" to sighted spectators. None of that is interactive.
+## The side glass walls are the one exception: purely decorative in every
+## normal mode (the ball only ever banks off the two BACK walls there, never
+## the sides - see Ball.gd), but in LAN Wall Mode (NetworkSession.wall_mode)
+## these exact walls - same position, same geometry - become interactive:
+## a curved shot that would otherwise sail out to the side instead bounces
+## off them into play. See Ball.gd's class doc comment for the physics.
 
 ## Across (left-right, x-axis) tiles per side - left/middle/right, so a
 ## straight, left-spun, and right-spun shot each have their own landing tile.
@@ -144,8 +148,10 @@ func _build_back_wall(is_player_side: bool) -> void:
 	mesh_instance.name = "BackWall_%s" % ("Player" if is_player_side else "Bot")
 	add_child(mesh_instance)
 
-## Glass side walls (real padel courts are fully enclosed) - purely visual,
-## the ball never interacts with these, only the two back walls.
+## Glass side walls (real padel courts are fully enclosed) - purely visual
+## in every mode except LAN Wall Mode, positioned at exactly x = ±COURT_
+## HALF_WIDTH, the same boundary Ball.gd already checks curved shots
+## against, so Wall Mode's physics and this geometry always agree.
 func _build_side_walls() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.75, 0.8, 0.85, 0.3)

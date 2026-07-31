@@ -59,7 +59,13 @@ func _fallback_player_name() -> String:
 	return os_name if os_name != "" else "Player"
 
 func _apply_text() -> void:
-	var title: String = Loc.t("quick_online_mode_button") if NetworkSession.quick_mode else Loc.t("lan_title")
+	var title: String
+	if NetworkSession.quick_mode:
+		title = Loc.t("quick_online_mode_button")
+	elif NetworkSession.wall_mode:
+		title = Loc.t("wall_online_mode_button")
+	else:
+		title = Loc.t("lan_title")
 	title_label.text = title
 	title_label.accessibility_name = title
 	name_prompt_label.text = Loc.t("lan_name_prompt")
@@ -124,7 +130,13 @@ func _on_create_pressed() -> void:
 	_hosted_room_code = code
 	copy_code_button.visible = true
 	copy_code_button.grab_focus()
-	var key: String = "lan_hosting_quick_message" if NetworkSession.quick_mode else "lan_hosting_message"
+	var key: String
+	if NetworkSession.quick_mode:
+		key = "lan_hosting_quick_message"
+	elif NetworkSession.wall_mode:
+		key = "lan_hosting_wall_message"
+	else:
+		key = "lan_hosting_message"
 	var message: String = Loc.t(key) % code
 	_set_status(message)
 	Voice.say_dynamic(message)

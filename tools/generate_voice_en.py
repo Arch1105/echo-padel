@@ -33,6 +33,7 @@ FFMPEG = r"C:\Users\user\AppData\Roaming\Python\Python312\site-packages\imageio_
 LINES = {
 	"match_start": "New match. Best of three sets. Your serve.",
 	"quick_match_start": "New match. First to seven, win by two.",
+	"wall_match_start": "New match. Best of three sets. Side walls are in play - shots that would go out bounce back into play instead. Your serve.",
 	"your_serve": "Your serve.",
 	"bot_serve": "Bot serves.",
 	"out": "Out.",

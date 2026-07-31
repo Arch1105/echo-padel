@@ -72,6 +72,14 @@ var match_over: bool = false
 ## announce_score() knows to skip the irrelevant games/sets tallies.
 var quick_mode: bool = false
 
+## LAN-only (see NetworkSession.wall_mode) - regular games/sets scoring, same
+## as Online Mode, but the court's side walls are interactive (see Ball.gd's
+## class doc comment) - a curved shot that would otherwise go out instead
+## bounces off the wall into play on the opposite side. Set the same way
+## quick_mode is above; only used here for the match-start announcement -
+## Ball.gd reads NetworkSession.wall_mode directly for the actual physics.
+var wall_mode: bool = false
+
 var _awaiting_serve_confirm: bool = false
 var _host_ready_confirmed: bool = false
 var _client_ready_confirmed: bool = false
@@ -130,6 +138,7 @@ func _ready() -> void:
 
 	if NetworkSession.is_networked:
 		quick_mode = NetworkSession.quick_mode
+		wall_mode = NetworkSession.wall_mode
 
 	var is_network_client: bool = NetworkSession.is_networked and not NetworkSession.is_host
 	if is_network_client:
@@ -143,7 +152,12 @@ func _ready() -> void:
 	if NetworkSession.is_networked:
 		# LAN match: no AI, no Career - the "Bot" node is driven by the
 		# remote player's real input (see BotAI.gd/NetworkSession.gd).
-		_speak("quick_match_start" if quick_mode else "match_start")
+		if quick_mode:
+			_speak("quick_match_start")
+		elif wall_mode:
+			_speak("wall_match_start")
+		else:
+			_speak("match_start")
 	elif CareerRun.active:
 		bot.strength_override = CareerRun.current_strength()
 		Voice.say_dynamic("%s. %s. Your opponent: %s." %

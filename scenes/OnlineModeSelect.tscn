@@ -55,6 +55,13 @@ text = "Quick Online Mode"
 accessibility_name = "Quick Online Mode"
 accessibility_description = "Fast scoring: first to seven points, win by two, no games or sets."
 
+[node name="WallModeButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(320, 52)
+text = "Wall Mode"
+accessibility_name = "Wall Mode"
+accessibility_description = "Standard scoring, but the court's side walls are in play - a shot that would go out bounces off the wall instead."
+
 [node name="StoreButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 custom_minimum_size = Vector2(320, 52)

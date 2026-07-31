@@ -26,6 +26,19 @@ class_name Ball
 ## so the per-frame integration naturally reflects it there first, then
 ## carries it forward across the net to land in the opponent's court.
 ##
+## Wall Mode (NetworkSession.wall_mode, a third LAN-only online option
+## alongside Online/Quick Online - see OnlineModeSelect.gd) turns the side
+## walls (already-existing visual geometry, see Court.gd's _build_side_
+## walls()) from decorative into interactive: a shot whose curve would
+## otherwise sail out to the side instead reflects off that wall and lands
+## on the *opposite* side of the court, still in play. Uses the exact same
+## "aim past the boundary, let the per-frame integration reflect it there"
+## trick as the back-wall case above, just mirrored across the court's
+## center rather than back toward the same side - see attempt_hit()'s
+## side_wall_x/final_x math and _integrate()'s _hop_allow_side_wall_bank
+## check. Every other mode (Online, Quick Online, Play, Career, Training)
+## is untouched - a wide curve still simply goes out for all of them.
+##
 ## Per playtest feedback the soundscape is kept deliberately sparse: just
 ## racket hits and bounces, plus a single cheer/boo on point outcomes (see
 ## Sfx3D.gd) - no continuous ball-tracking tone, no charge tone. Voice still
@@ -103,6 +116,8 @@ var _gravity: float = 0.0
 var _hop_target_side_is_player: bool = false
 var _hop_allow_wall_bank: bool = false
 var _hop_bank_side_is_player: bool = false
+var _hop_allow_side_wall_bank: bool = false
+var _hop_side_wall_x: float = 0.0
 var hop_is_dolly: bool = false
 var _hop_is_smash: bool = false
 var _continuation_elapsed: float = 0.0
@@ -317,6 +332,26 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 		allow_bank = false
 		to = Vector3(base_x, 0.0, Court.cell_center(target_side_is_player, hitter_col, land_row).z)
 
+	# Wall Mode: a shot whose curve would otherwise sail out to the side
+	# instead bounces off that wall and redirects to the opposite side - see
+	# the class doc comment. Applies uniformly regardless of which depth
+	# branch above produced `to`, since curve/base_x is computed the same
+	# way for all three. final_x sits on the *opposite* side of center, at a
+	# distance scaled by how far past the wall the original curve would have
+	# carried it (clamped so it can never touch either wall exactly) - a
+	# shot that barely goes out only just crosses center; a hard curve lands
+	# deep on the far side. to.x is then aimed *past* the real wall by the
+	# same amount final_x sits *inside* it, so the single in-flight
+	# reflection in _integrate() below lands it exactly on final_x.
+	var side_wall_x: float = 0.0
+	var allow_side_wall_bank: bool = false
+	if NetworkSession.wall_mode and absf(to.x) > Court.COURT_HALF_WIDTH:
+		side_wall_x = signf(to.x) * Court.COURT_HALF_WIDTH
+		var overshoot: float = absf(to.x) - Court.COURT_HALF_WIDTH
+		var final_x: float = -signf(to.x) * clampf(overshoot, 0.15, Court.COURT_HALF_WIDTH - 0.15)
+		to.x = 2.0 * side_wall_x - final_x
+		allow_side_wall_bank = true
+
 	_last_hitter = by
 	_bounce_count_this_side = 0
 	if hitter_side_is_player:
@@ -341,7 +376,7 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 	if sound_name == "smash":
 		_spawn_smash_fireworks(from)
 	_launch_flight(from, to, duration, peak_height, target_side_is_player, allow_bank, hitter_side_is_player,
-			is_dolly, is_smash)
+			is_dolly, is_smash, allow_side_wall_bank, side_wall_x)
 	returned.emit(by)
 	return true
 
@@ -425,7 +460,8 @@ func _spawn_bounce_flash_local(pos: Vector3) -> void:
 
 func _launch_flight(from: Vector3, to: Vector3, duration: float, peak_height: float,
 		target_side_is_player: bool, allow_wall_bank: bool, bank_side_is_player: bool = false,
-		is_dolly: bool = false, is_smash: bool = false) -> void:
+		is_dolly: bool = false, is_smash: bool = false,
+		allow_side_wall_bank: bool = false, side_wall_x: float = 0.0) -> void:
 	global_position = from
 	_vx = (to.x - from.x) / duration
 	_vz = (to.z - from.z) / duration
@@ -436,6 +472,8 @@ func _launch_flight(from: Vector3, to: Vector3, duration: float, peak_height: fl
 	_hop_bank_side_is_player = bank_side_is_player
 	hop_is_dolly = is_dolly
 	_hop_is_smash = is_smash
+	_hop_allow_side_wall_bank = allow_side_wall_bank
+	_hop_side_wall_x = side_wall_x
 	_hop_state = HopState.FLIGHT
 
 func _physics_process(delta: float) -> void:
@@ -523,6 +561,16 @@ func _integrate(delta: float) -> void:
 			var bank_bus: String = Sfx3D.NEAR_BUS if _hop_bank_side_is_player else Sfx3D.DISTANT_BUS
 			var bank_volume_db: float = 2.0 if _hop_bank_side_is_player else 0.0
 			_play_and_relay("wall_bank", global_position, bank_volume_db, 1.0, bank_bus)
+
+	if _hop_allow_side_wall_bank:
+		if (_hop_side_wall_x > 0.0 and global_position.x >= _hop_side_wall_x) or \
+				(_hop_side_wall_x < 0.0 and global_position.x <= _hop_side_wall_x):
+			global_position.x = 2.0 * _hop_side_wall_x - global_position.x
+			_vx = -_vx
+			_hop_allow_side_wall_bank = false
+			var side_bus: String = Sfx3D.NEAR_BUS if _hop_target_side_is_player else Sfx3D.DISTANT_BUS
+			var side_volume_db: float = 2.0 if _hop_target_side_is_player else 0.0
+			_play_and_relay("wall_bank", global_position, side_volume_db, 1.0, side_bus)
 
 	if global_position.y <= 0.0 and _vy < 0.0:
 		_handle_bounce()

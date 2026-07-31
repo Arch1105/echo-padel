@@ -172,6 +172,10 @@ const STRINGS := {
 	"help_online_extras_body": {"en": "Winning an online match earns you coins - 5 for Online Mode, 2 for the faster Quick Online Mode. Spend coins in the Emote Store (from the online menu) on celebration emotes - short music clips; press Tab (or a controller's left trigger) on an emote there to preview how it sounds before buying. During an online match, hold Left Shift (or a controller's left bumper) to open your emote menu. On keyboard, use Down to pick one you own and Enter to play it; on a controller, the left and right bumpers cycle between them instead, and A (or Cross on PS5) plays the highlighted one. Your opponent hears it too, and so do you.",
 			"es": "Ganar un partido en línea te da monedas - 5 en Modo en línea, 2 en el Modo rápido en línea, más rápido. Gástalas en la Tienda de emotes (desde el menú en línea) en emotes de celebración - clips musicales cortos; pulsa Tab (o el gatillo izquierdo de un mando) sobre un emote ahí para escuchar cómo suena antes de comprarlo. Durante un partido en línea, mantén pulsada la tecla Shift izquierda (o el gatillo izquierdo de un mando) para abrir tu menú de emotes. Con teclado, usa Abajo para elegir uno que tengas y Enter para reproducirlo; con un mando, los gatillos izquierdo y derecho los recorren en su lugar, y A (o Cruz en PS5) reproduce el que esté resaltado. Tu rival también lo escuchará, y tú también."},
 
+	"help_wall_mode_heading": {"en": "Wall Mode (Online)", "es": "Modo pared (en línea)"},
+	"help_wall_mode_body": {"en": "A third online option, next to Online Mode and Quick Online Mode, connected the same way (Create Room or Join Room). Scoring is standard - games and sets, best of three - but the court's side walls are in play. A shot spun hard enough to normally sail out to the side instead bounces off that wall with a distinct thump and carries on into play, landing on the opposite side of the court instead of faulting. Everything else - movement, shots, drop shots, smashes, coins, emotes - works exactly as in Online Mode.",
+			"es": "Una tercera opción en línea, junto a Modo en línea y Modo rápido en línea, con la misma forma de conectar (Crear sala o Unirse a sala). La puntuación es estándar - juegos y sets, al mejor de tres - pero las paredes laterales de la pista están en juego. Un golpe con suficiente efecto como para salir normalmente por el lateral en su lugar rebota en esa pared con un golpe seco distintivo y sigue en juego, cayendo en el lado opuesto de la pista en vez de ser falta. Todo lo demás - movimiento, golpes, dejadas, remates, monedas, emotes - funciona exactamente igual que en Modo en línea."},
+
 	"help_settings_heading": {"en": "Settings", "es": "Configuración"},
 	"help_settings_body": {"en": "Adjust the master volume and switch between English and Spanish menus and voice from the Settings screen, reachable from the main menu.",
 			"es": "Ajusta el volumen general y cambia entre menús y voz en inglés o español desde la pantalla de Configuración, accesible desde el menú principal."},
@@ -205,6 +209,8 @@ const STRINGS := {
 			"es": "El código de tu sala es %s. Dile al otro jugador que elija Unirse a sala y lo escriba. Esperando a que se conecte."},
 	"lan_hosting_quick_message": {"en": "Your room code is %s. Tell the other player to choose Quick Online Mode, then Join Room, and type that in. Waiting for them to connect.",
 			"es": "El código de tu sala es %s. Dile al otro jugador que elija Modo rápido en línea, luego Unirse a sala, y lo escriba. Esperando a que se conecte."},
+	"lan_hosting_wall_message": {"en": "Your room code is %s. Tell the other player to choose Wall Mode, then Join Room, and type that in. Waiting for them to connect.",
+			"es": "El código de tu sala es %s. Dile al otro jugador que elija Modo pared, luego Unirse a sala, y lo escriba. Esperando a que se conecte."},
 	"lan_no_address_message": {"en": "Couldn't find a network address on this device. Make sure you're connected to WiFi and try again.",
 			"es": "No se encontró una dirección de red en este dispositivo. Comprueba tu conexión WiFi e inténtalo de nuevo."},
 	"lan_join_code_prompt": {"en": "Enter the room code the other player gave you.", "es": "Escribe el código de sala que te dio el otro jugador."},
@@ -231,6 +237,9 @@ const STRINGS := {
 	"quick_online_mode_button": {"en": "Quick Online Mode", "es": "Modo rápido en línea"},
 	"quick_online_mode_desc": {"en": "Fast scoring: first to seven points, win by two, no games or sets.",
 			"es": "Puntuación rápida: el primero en llegar a siete puntos, con dos de ventaja, sin juegos ni sets."},
+	"wall_online_mode_button": {"en": "Wall Mode", "es": "Modo pared"},
+	"wall_online_mode_desc": {"en": "Standard scoring, but the court's side walls are in play - a shot that would go out bounces off the wall into play on the opposite side instead.",
+			"es": "Puntuación estándar, pero las paredes laterales de la pista están en juego - un golpe que saldría fuera rebota en la pared y sigue en juego en el lado opuesto."},
 
 	"store_button": {"en": "Emote Store", "es": "Tienda de emotes"},
 	"store_desc": {"en": "Spend coins earned from online wins on celebration emotes.",
@@ -265,6 +274,10 @@ const STRINGS := {
 	"emote_game_over_trailer": {"en": "Game Over Trailer", "es": "Tráiler de fin de partida"},
 	"emote_too_easy_tease": {"en": "Too Easy", "es": "Demasiado fácil"},
 	"emote_champions_taunt": {"en": "Champions Taunt", "es": "Burla de campeones"},
+	"emote_sarcastic_clap": {"en": "Sarcastic Clap", "es": "Aplauso sarcástico"},
+	"emote_gg_chime": {"en": "GG Chime", "es": "Melodía GG"},
+	"emote_record_scratch": {"en": "Record Scratch", "es": "Frenazo de disco"},
+	"emote_robot_target": {"en": "Robot Target", "es": "Objetivo robot"},
 
 	"emote_menu_title": {"en": "Emotes", "es": "Emotes"},
 	"emote_menu_empty": {"en": "You don't own any emotes yet - visit the Emote Store from the main menu.",
