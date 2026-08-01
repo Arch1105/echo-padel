@@ -373,7 +373,8 @@ func relay_sound(sound_name: String, pos: Vector3, volume_db: float, pitch: floa
 		var mirrored_bus: String = Sfx3D.DISTANT_BUS if bus == Sfx3D.NEAR_BUS else Sfx3D.NEAR_BUS
 		net_sound.rpc(sound_name, mirrored_pos, volume_db, pitch, mirrored_bus)
 
-## --- Visual-only effect relay: host -> client (fireworks / bounce flash) ---
+## --- Visual-only effect relay: host -> client (fireworks / bounce flash /
+## hit-window ring / wall flash / racket-hit flash) ---
 
 @rpc("authority", "reliable")
 func net_visual_effect(effect_name: String, pos: Vector3) -> void:
@@ -384,7 +385,17 @@ func net_visual_effect(effect_name: String, pos: Vector3) -> void:
 func relay_visual_effect(effect_name: String, pos: Vector3) -> void:
 	if is_networked and is_host:
 		var mirrored_pos: Vector3 = Vector3(pos.x, pos.y, -pos.z)
-		net_visual_effect.rpc(effect_name, mirrored_pos)
+		# hit_flash_player/hit_flash_bot bake in *which side's color* to show -
+		# same "near becomes distant" perspective flip relay_sound() already
+		# does for NEAR_BUS/DISTANT_BUS, just encoded in the effect name
+		# instead of a bus string, since the host's "player" (blue) is the
+		# client's "bot" (red) and vice versa.
+		var mirrored_effect: String = effect_name
+		if effect_name == "hit_flash_player":
+			mirrored_effect = "hit_flash_bot"
+		elif effect_name == "hit_flash_bot":
+			mirrored_effect = "hit_flash_player"
+		net_visual_effect.rpc(mirrored_effect, mirrored_pos)
 
 ## --- Rumble relay: host -> client (their own controller, if any). The host
 ## already rumbles locally for its own "you" actions (see Ball.gd/

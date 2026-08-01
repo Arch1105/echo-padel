@@ -167,6 +167,27 @@ const BALL_NORMAL_COLOR := Color(0.8, 0.95, 0.2)
 const BALL_DOLLY_COLOR := Color(1.0, 0.55, 0.05)
 const FIREWORKS_LIFETIME := 1.2
 const BOUNCE_FLASH_LIFETIME := 0.5
+## The second ground bounce is the actual hit-timing deadline (the first is
+## just a locate cue) - per feedback that it needed to be obviously more
+## visible than the first, it gets its own bigger, brighter expanding ring on
+## top of the regular dust puff both bounces get, rather than just a bigger
+## dust puff - a genuinely different-*looking* event, not just a scaled-up
+## one, so it reads at a glance as "this one's your moment" even off to the
+## side of where someone's looking.
+const HIT_WINDOW_RING_LIFETIME := 0.45
+## Wall Mode's side walls and the back-wall bank shot previously had no
+## visual at all when the ball hit them - per feedback that made a wall
+## bounce indistinguishable from a player's actual return. An icy-blue spark
+## right on the glass (as opposed to the warm white ground-bounce dust, the
+## side-colored racket return flash, or the gold smash fireworks - four
+## different looks for four different events) fixes that.
+const WALL_FLASH_LIFETIME := 0.4
+## Every *non-smash* successful return gets a quick side-colored pulse at the
+## racket (smash already has its own bigger gold fireworks burst - see
+## _spawn_smash_fireworks() - so this only fires for the plainer hits that
+## previously had zero visual feedback of their own beyond the ball changing
+## direction, which was easy to miss/confuse with a wall bounce).
+const HIT_FLASH_LIFETIME := 0.35
 
 ## A flat, dark "contact shadow" tracking the ball's XZ position at all
 ## times, sized and faded by height (see _update_shadow()) - a real tennis
@@ -182,6 +203,7 @@ const SHADOW_MIN_ALPHA := 0.12
 @onready var _shadow: MeshInstance3D = $Shadow
 var _ball_mat: StandardMaterial3D
 var _shadow_mat: StandardMaterial3D
+var _trail: CPUParticles3D
 
 func _ready() -> void:
 	_ball_mat = StandardMaterial3D.new()
@@ -197,6 +219,39 @@ func _ready() -> void:
 	_shadow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_shadow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_shadow.material_override = _shadow_mat
+
+	_build_trail()
+
+## A continuous fading streak of "breadcrumb" spheres left behind while the
+## ball is actually airborne (see _physics_process's height check below) -
+## per feedback that sighted players couldn't tell where a shot was headed
+## until it had mostly already arrived. local_coords=false plus zero
+## velocity/spread/gravity is the trick: each particle is emitted once at
+## the ball's current world position and then just sits there shrinking and
+## fading while the ball keeps flying on ahead of it, so the trail traces
+## the actual arc rather than following the ball around.
+func _build_trail() -> void:
+	_trail = CPUParticles3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.045
+	mesh.height = 0.09
+	_trail.mesh = mesh
+	_trail.amount = 28
+	_trail.lifetime = 0.35
+	_trail.local_coords = false
+	_trail.emitting = false
+	_trail.direction = Vector3.ZERO
+	_trail.spread = 0.0
+	_trail.gravity = Vector3.ZERO
+	_trail.initial_velocity_min = 0.0
+	_trail.initial_velocity_max = 0.0
+	_trail.scale_amount_min = 0.35
+	_trail.scale_amount_max = 0.75
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1.0, 1.0, 0.65, 0.6))
+	grad.add_point(1.0, Color(1.0, 0.85, 0.3, 0.0))
+	_trail.color_ramp = grad
+	add_child(_trail)
 
 ## Keeps the ground shadow blob under the ball's current XZ position at all
 ## times, shrinking and fading it the higher the ball currently is - runs
@@ -421,6 +476,8 @@ func attempt_hit(by: String, hitter_col: int, hitter_row_local: int, shape: Dict
 				NetworkSession.relay_rumble(m[0], m[1], m[2])
 	if is_smash:
 		_spawn_smash_fireworks(from)
+	else:
+		_spawn_hit_flash(from, hitter_side_is_player)
 	_launch_flight(from, to, duration, peak_height, target_side_is_player, allow_bank, hitter_side_is_player,
 			is_dolly, is_smash, allow_side_wall_bank, side_wall_x, is_super_smash)
 	returned.emit(by)
@@ -467,35 +524,41 @@ func _spawn_smash_fireworks_local(pos: Vector3) -> void:
 	t.timeout.connect(particles.queue_free)
 
 ## Relays to the client in a LAN match, same reasoning as the fireworks above.
-func _spawn_bounce_flash(pos: Vector3) -> void:
-	_spawn_bounce_flash_local(pos)
+## is_hit_window: true only for the second bounce - the one that actually
+## opens the hit window - which also gets the extra expanding ring below.
+func _spawn_bounce_flash(pos: Vector3, is_hit_window: bool = false) -> void:
+	_spawn_bounce_flash_local(pos, is_hit_window)
 	if NetworkSession.is_networked and NetworkSession.is_host:
-		NetworkSession.relay_visual_effect("bounce_flash", pos)
+		NetworkSession.relay_visual_effect("hit_window_bounce" if is_hit_window else "bounce_flash", pos)
 
-## Sighted-player visual only - a small flat burst of dust at ground level on
-## every bounce (both the first "locate" bounce and the second), so a bounce
-## reads as a distinct visible event rather than only being inferable from
-## the ball mesh's continuous arc.
-func _spawn_bounce_flash_local(pos: Vector3) -> void:
+## Sighted-player visual only - a burst of dust at ground level on every
+## bounce (both the first "locate" bounce and the second), so a bounce reads
+## as a distinct visible event rather than only being inferable from the
+## ball mesh's continuous arc. Bigger/brighter than the original version per
+## feedback that it needed to be crisper and easier to spot; the second
+## (hit-window) bounce gets a further boost on top plus its own expanding
+## ring (see _spawn_hit_window_ring), so the actual "hit it now" moment is
+## unmistakably bigger than the first bounce's plain locate cue.
+func _spawn_bounce_flash_local(pos: Vector3, is_hit_window: bool = false) -> void:
 	var particles := CPUParticles3D.new()
 	var mesh := SphereMesh.new()
-	mesh.radius = 0.025
-	mesh.height = 0.05
+	mesh.radius = 0.045 if is_hit_window else 0.035
+	mesh.height = mesh.radius * 2.0
 	particles.mesh = mesh
-	particles.amount = 10
-	particles.lifetime = 0.28
+	particles.amount = 22 if is_hit_window else 16
+	particles.lifetime = 0.38
 	particles.one_shot = true
 	particles.explosiveness = 1.0
 	particles.direction = Vector3(0, 1, 0)
 	particles.spread = 65.0
 	particles.gravity = Vector3(0, -6.0, 0)
-	particles.initial_velocity_min = 0.6
-	particles.initial_velocity_max = 1.3
-	particles.scale_amount_min = 0.5
-	particles.scale_amount_max = 1.0
-	particles.color = Color(1.0, 1.0, 1.0, 0.85)
+	particles.initial_velocity_min = 0.9
+	particles.initial_velocity_max = 1.9
+	particles.scale_amount_min = 0.7
+	particles.scale_amount_max = 1.5
+	particles.color = Color(1.0, 1.0, 1.0, 1.0)
 	var grad := Gradient.new()
-	grad.set_color(0, Color(1.0, 1.0, 1.0, 0.85))
+	grad.set_color(0, Color(1.0, 1.0, 1.0, 1.0))
 	grad.add_point(1.0, Color(1.0, 1.0, 1.0, 0.0))
 	particles.color_ramp = grad
 	get_tree().current_scene.add_child(particles)
@@ -503,6 +566,132 @@ func _spawn_bounce_flash_local(pos: Vector3) -> void:
 	particles.emitting = true
 	var t: SceneTreeTimer = get_tree().create_timer(BOUNCE_FLASH_LIFETIME)
 	t.timeout.connect(particles.queue_free)
+	if is_hit_window:
+		_spawn_hit_window_ring_local(pos)
+
+## The second bounce's extra signal: a flat gold ring that expands outward
+## and fades right where the ball landed - a genuinely different shape/motion
+## from the dust puff (which both bounces get), not just a bigger version of
+## it, so "this is your hit window" reads even in peripheral vision. Local
+## only (not relayed) - purely decorative flourish on top of the (already
+## relayed) dust puff, not worth a second network message.
+func _spawn_hit_window_ring_local(pos: Vector3) -> void:
+	_spawn_ring_pulse(pos + Vector3(0, 0.03, 0), Color(1.0, 0.85, 0.2, 0.9), 3.2, HIT_WINDOW_RING_LIFETIME)
+
+## Shared by the hit-window ring, the wall-glass flash, and the racket-hit
+## flash below - a solid (not particle) expanding-and-fading torus, so each
+## of those three "something just happened" events is guaranteed to read
+## clearly even at a glance or in a single frame, on top of whatever
+## particle burst that event also spawns. Same shape and motion every time,
+## just a different color/position per event, which is itself part of the
+## point - one consistent "pulse" language, distinguished only by color.
+func _spawn_ring_pulse(pos: Vector3, color: Color, target_scale: float, lifetime: float) -> void:
+	var ring := MeshInstance3D.new()
+	var mesh := TorusMesh.new()
+	mesh.inner_radius = 0.1
+	mesh.outer_radius = 0.15
+	ring.mesh = mesh
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ring.material_override = mat
+	get_tree().current_scene.add_child(ring)
+	ring.global_position = pos
+	var tw: Tween = ring.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(ring, "scale", Vector3(target_scale, target_scale, target_scale), lifetime) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(mat, "albedo_color:a", 0.0, lifetime)
+	tw.chain().tween_callback(ring.queue_free)
+
+## Relays to the client, same reasoning as the fireworks/bounce flash above.
+## Called for both the back-wall bank and Wall Mode's side-wall bank - the
+## same glass-impact look either way, since both are "the ball just hit the
+## glass" from a viewer's perspective.
+func _spawn_wall_flash(pos: Vector3) -> void:
+	_spawn_wall_flash_local(pos)
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_visual_effect("wall_flash", pos)
+
+## Sighted-player visual only - previously a wall bank had *no* visual at
+## all, which per feedback made it impossible to tell apart from a player's
+## actual return. An icy-blue spark burst, distinct from the warm-white
+## ground-bounce dust, the gold hit-window ring, the side-colored return
+## flash below, and the gold smash fireworks - four different events, four
+## different looks.
+func _spawn_wall_flash_local(pos: Vector3) -> void:
+	var particles := CPUParticles3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.035
+	mesh.height = 0.07
+	particles.mesh = mesh
+	particles.amount = 20
+	particles.lifetime = WALL_FLASH_LIFETIME
+	particles.one_shot = true
+	particles.explosiveness = 1.0
+	particles.direction = Vector3(0, 0, 0)
+	particles.spread = 180.0
+	particles.gravity = Vector3.ZERO
+	particles.initial_velocity_min = 1.2
+	particles.initial_velocity_max = 2.6
+	particles.scale_amount_min = 0.6
+	particles.scale_amount_max = 1.3
+	particles.color = Color(0.5, 0.85, 1.0, 1.0)
+	var grad := Gradient.new()
+	grad.set_color(0, Color(0.7, 0.95, 1.0, 1.0))
+	grad.add_point(1.0, Color(0.3, 0.7, 1.0, 0.0))
+	particles.color_ramp = grad
+	get_tree().current_scene.add_child(particles)
+	particles.global_position = pos
+	particles.emitting = true
+	var t: SceneTreeTimer = get_tree().create_timer(WALL_FLASH_LIFETIME)
+	t.timeout.connect(particles.queue_free)
+	_spawn_ring_pulse(pos, Color(0.5, 0.85, 1.0, 0.9), 2.6, WALL_FLASH_LIFETIME)
+
+## Relays to the client, same reasoning as the others above. effect_name
+## bakes in which side hit it (see puppet_play_visual_effect) since
+## relay_visual_effect()'s RPC only carries a name + position, no color.
+func _spawn_hit_flash(pos: Vector3, hitter_side_is_player: bool) -> void:
+	_spawn_hit_flash_local(pos, hitter_side_is_player)
+	if NetworkSession.is_networked and NetworkSession.is_host:
+		NetworkSession.relay_visual_effect(
+				"hit_flash_player" if hitter_side_is_player else "hit_flash_bot", pos)
+
+## Sighted-player visual only - every plain (non-smash) successful return
+## previously had zero visual feedback of its own, easy to lose track of
+## against a wall bounce that (before the flash above existed) also had
+## none. Colored to match that side's own kit/floor tint (see Court.gd/
+## PaddleCharacter.gd) so it doubles as "which side just hit it" at a glance.
+func _spawn_hit_flash_local(pos: Vector3, hitter_side_is_player: bool) -> void:
+	var particles := CPUParticles3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.03
+	mesh.height = 0.06
+	particles.mesh = mesh
+	particles.amount = 16
+	particles.lifetime = HIT_FLASH_LIFETIME
+	particles.one_shot = true
+	particles.explosiveness = 1.0
+	particles.direction = Vector3(0, 1, 0)
+	particles.spread = 100.0
+	particles.gravity = Vector3(0, -3.0, 0)
+	particles.initial_velocity_min = 1.0
+	particles.initial_velocity_max = 2.0
+	particles.scale_amount_min = 0.6
+	particles.scale_amount_max = 1.2
+	var base_color: Color = Color(0.2, 0.45, 0.75) if hitter_side_is_player else Color(0.75, 0.25, 0.25)
+	particles.color = base_color
+	var grad := Gradient.new()
+	grad.set_color(0, base_color.lightened(0.3))
+	grad.add_point(1.0, Color(base_color.r, base_color.g, base_color.b, 0.0))
+	particles.color_ramp = grad
+	get_tree().current_scene.add_child(particles)
+	particles.global_position = pos
+	particles.emitting = true
+	var t: SceneTreeTimer = get_tree().create_timer(HIT_FLASH_LIFETIME)
+	t.timeout.connect(particles.queue_free)
+	_spawn_ring_pulse(pos, Color(base_color.r, base_color.g, base_color.b, 0.9), 2.2, HIT_FLASH_LIFETIME)
 
 func _launch_flight(from: Vector3, to: Vector3, duration: float, peak_height: float,
 		target_side_is_player: bool, allow_wall_bank: bool, bank_side_is_player: bool = false,
@@ -527,6 +716,11 @@ func _physics_process(delta: float) -> void:
 	if _ball_mat:
 		_ball_mat.albedo_color = BALL_DOLLY_COLOR if hop_is_dolly else BALL_NORMAL_COLOR
 	_update_shadow()
+	# Height, not _hop_state, so this also works for the client's puppet Ball
+	# (which never runs the _hop_state machine below - see is_puppet) since
+	# global_position.y is kept in sync either way via the host's broadcast.
+	if _trail:
+		_trail.emitting = global_position.y > 0.03
 	if is_puppet:
 		return
 	match _hop_state:
@@ -592,6 +786,14 @@ func puppet_play_visual_effect(effect_name: String, pos: Vector3) -> void:
 		_spawn_smash_fireworks_local(pos)
 	elif effect_name == "bounce_flash":
 		_spawn_bounce_flash_local(pos)
+	elif effect_name == "hit_window_bounce":
+		_spawn_bounce_flash_local(pos, true)
+	elif effect_name == "wall_flash":
+		_spawn_wall_flash_local(pos)
+	elif effect_name == "hit_flash_player":
+		_spawn_hit_flash_local(pos, true)
+	elif effect_name == "hit_flash_bot":
+		_spawn_hit_flash_local(pos, false)
 
 func _integrate(delta: float) -> void:
 	_vy -= _gravity * delta
@@ -608,6 +810,7 @@ func _integrate(delta: float) -> void:
 			var bank_bus: String = Sfx3D.NEAR_BUS if _hop_bank_side_is_player else Sfx3D.DISTANT_BUS
 			var bank_volume_db: float = 2.0 if _hop_bank_side_is_player else 0.0
 			_play_and_relay("wall_bank", global_position, bank_volume_db, 1.0, bank_bus)
+			_spawn_wall_flash(global_position)
 
 	if _hop_allow_side_wall_bank:
 		if (_hop_side_wall_x > 0.0 and global_position.x >= _hop_side_wall_x) or \
@@ -618,6 +821,7 @@ func _integrate(delta: float) -> void:
 			var side_bus: String = Sfx3D.NEAR_BUS if _hop_target_side_is_player else Sfx3D.DISTANT_BUS
 			var side_volume_db: float = 2.0 if _hop_target_side_is_player else 0.0
 			_play_and_relay("wall_bank", global_position, side_volume_db, 1.0, side_bus)
+			_spawn_wall_flash(global_position)
 
 	if global_position.y <= 0.0 and _vy < 0.0:
 		_handle_bounce()
@@ -630,7 +834,10 @@ func _handle_bounce() -> void:
 		_resolve_fault("out", _opponent_of(_last_hitter))
 		return
 
-	_spawn_bounce_flash(global_position)
+	# _bounce_count_this_side hasn't been incremented for *this* bounce yet -
+	# 0 means this is the first (locate) bounce, 1 means this is the second
+	# (hit-window) bounce, which gets the extra ring (see _spawn_bounce_flash).
+	_spawn_bounce_flash(global_position, _bounce_count_this_side == 1)
 
 	var landed_side_is_player: bool = global_position.z > 0.0
 	var col: int = Court.x_to_col(global_position.x)
